@@ -40,9 +40,9 @@
 #define RPL_H
 
 #include "lib/list.h"
-#include "net/uip.h"
-#include "net/uip-ds6.h"
-#include "sys/ctimer.h"
+#include "uip6.h"
+#include "uip-ds6.h"
+#include "sys/event.h"
 #include "sys/stimestamp.h"
 
 /* set to 1 for some statistics on trickle / DIO */
@@ -300,6 +300,14 @@ struct rpl_of {
 };
 typedef struct rpl_of rpl_of_t;
 /*---------------------------------------------------------------------------*/
+/* Specials evtimers */
+typedef struct rpl_ev_dio_t {
+  struct ev_periodic periodic;
+  uint32_t dio_next_delay; /* delay for completion of dio interval */
+  rpl_instance_t *instance;
+} rpl_ev_dio_t;
+
+/*---------------------------------------------------------------------------*/
 /* Instance */
 struct rpl_instance {
   /* DAG configuration */
@@ -324,14 +332,8 @@ struct rpl_instance {
   uint8_t dio_send; /* for keeping track of which mode the timer is in 
 */
   uint8_t dio_counter;
-#if RPL_CONF_STATS
-  uint16_t dio_totint;
-  uint16_t dio_totsend;
-  uint16_t dio_totrecv;
-#endif /* RPL_CONF_STATS */
   uint32_t dio_next_delay; /* delay for completion of dio interval */
-  struct ctimer dio_timer;
-  struct ctimer dao_timer;
+  struct rpl_ev_dio_t dio_timer;
 };
 
 /*---------------------------------------------------------------------------*/

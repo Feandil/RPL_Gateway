@@ -1,7 +1,3 @@
-/**
- * \addtogroup uip6
- * @{
- */
 /*
  * Copyright (c) 2010, Swedish Institute of Computer Science.
  * All rights reserved.
@@ -33,21 +29,11 @@
  * This file is part of the Contiki operating system.
  *
  */
-/**
- * \file
- *         The minrank-hysteresis objective function (OCP 1).
- *
- *         This implementation uses the estimated number of 
- *         transmissions (ETX) as the additive routing metric.
- *
- * \author Joakim Eriksson <joakime@sics.se>, Nicolas Tsiftes <nvt@sics.se>
- */
 
-#include "net/rpl/rpl-private.h"
-#include "net/neighbor-info.h"
+#include "rpl/rpl-private.h"
 
 #define DEBUG 1
-#include "net/uip-debug.h"
+#include "uip-debug.h"
 
 static void reset(rpl_dag_t *);
 static void parent_state_callback(rpl_parent_t *, int, int);

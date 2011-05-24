@@ -1,15 +1,3 @@
-/**
- * \addtogroup uip6
- * @{
- */
-
-/**
- * \file
- *         ICMPv6 echo request and error messages (RFC 4443)
- * \author Julien Abeille <jabeille@cisco.com> 
- * \author Mathilde Durvy <mdurvy@cisco.com>
- */
-
 /*
  * Copyright (c) 2001-2003, Adam Dunkels.
  * All rights reserved.
@@ -43,42 +31,28 @@
  */
 
 #include <string.h>
-#include "net/uip-ds6.h"
-#include "net/uip-icmp6.h"
+#include "uip-ds6.h"
+#include "uip-icmp6.h"
 
 #define DEBUG 0
-#if DEBUG
-#include <stdio.h>
-#define PRINTF(...) printf(__VA_ARGS__)
-#define PRINT6ADDR(addr) PRINTF(" %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x ", ((u8_t *)addr)[0], ((u8_t *)addr)[1], ((u8_t *)addr)[2], ((u8_t *)addr)[3], ((u8_t *)addr)[4], ((u8_t *)addr)[5], ((u8_t *)addr)[6], ((u8_t *)addr)[7], ((u8_t *)addr)[8], ((u8_t *)addr)[9], ((u8_t *)addr)[10], ((u8_t *)addr)[11], ((u8_t *)addr)[12], ((u8_t *)addr)[13], ((u8_t *)addr)[14], ((u8_t *)addr)[15])
-#define PRINTLLADDR(lladdr) PRINTF(" %02x:%02x:%02x:%02x:%02x:%02x ",lladdr->addr[0], lladdr->addr[1], lladdr->addr[2], lladdr->addr[3],lladdr->addr[4], lladdr->addr[5])
-#else
-#define PRINTF(...)
-#define PRINT6ADDR(addr)
-#endif
+#include "uip-debug.h"
 
 #define UIP_IP_BUF                ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
 #define UIP_ICMP_BUF            ((struct uip_icmp_hdr *)&uip_buf[uip_l2_l3_hdr_len])
 #define UIP_ICMP6_ERROR_BUF  ((struct uip_icmp6_error *)&uip_buf[uip_l2_l3_icmp_hdr_len])
-#if UIP_CONF_IPV6_RPL
 #define UIP_EXT_BUF              ((struct uip_ext_hdr *)&uip_buf[uip_l2_l3_hdr_len])
 #define UIP_FIRST_EXT_BUF        ((struct uip_ext_hdr *)&uip_buf[UIP_LLIPH_LEN])
-#endif /* UIP_CONF_IPV6_RPL */
 
 /** \brief temporary IP address */
 static uip_ipaddr_t tmp_ipaddr;
 
-#if UIP_CONF_IPV6_RPL
 int  rpl_invert_header(void);
-#endif /* UIP_CONF_IPV6_RPL */
 
 /*---------------------------------------------------------------------------*/
 void
 uip_icmp6_echo_request_input(void)
 {
-#if UIP_CONF_IPV6_RPL
   u8_t temp_ext_len;
-#endif /* UIP_CONF_IPV6_RPL */
   /*
    * we send an echo reply. It is trivial if there was no extension
    * headers in the request otherwise we need to remove the extension
@@ -103,7 +77,6 @@ uip_icmp6_echo_request_input(void)
   }
 
   if(uip_ext_len > 0) {
-#if UIP_CONF_IPV6_RPL
     if ((temp_ext_len=rpl_invert_header())) {
       /* If there were other extension headers*/
       UIP_FIRST_EXT_BUF->next = UIP_PROTO_ICMP6;
@@ -122,7 +95,6 @@ uip_icmp6_echo_request_input(void)
       }
       uip_ext_len=temp_ext_len;
     } else {
-#endif /* UIP_CONF_IPV6_RPL */
       /* If there were extension headers*/
       UIP_IP_BUF->proto = UIP_PROTO_ICMP6;
       uip_len -= uip_ext_len;
@@ -137,9 +109,7 @@ uip_icmp6_echo_request_input(void)
               (uint8_t *)UIP_ICMP_BUF + UIP_ICMPH_LEN, 
               (uip_len - UIP_IPH_LEN - UIP_ICMPH_LEN));
       uip_ext_len = 0;
-#if UIP_CONF_IPV6_RPL
     }
-#endif /* UIP_CONF_IPV6_RPL */
   }
   /* Below is important for the correctness of UIP_ICMP_BUF and the
    * checksum
@@ -156,7 +126,6 @@ uip_icmp6_echo_request_input(void)
   PRINTF("from");
   PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
   PRINTF("\n");
-  UIP_STAT(++uip_stat.icmp.sent);
   return;
 }
 /*---------------------------------------------------------------------------*/
@@ -176,11 +145,7 @@ if (uip_ext_len) {
   }
 }
 
-#if UIP_CONF_IPV6_RPL
   uip_ext_len = rpl_invert_header();
-#else /* UIP_CONF_IPV6_RPL */
-  uip_ext_len = 0;
-#endif /* UIP_CONF_IPV6_RPL */
 
   /* remember data of original packet before shifting */
   uip_ipaddr_copy(&tmp_ipaddr, &UIP_IP_BUF->destipaddr);
@@ -220,12 +185,8 @@ if (uip_ext_len) {
       return;
     }
   } else {
-#if UIP_CONF_ROUTER
     /* need to pick a source that corresponds to this node */
     uip_ds6_select_src(&UIP_IP_BUF->srcipaddr, &tmp_ipaddr);
-#else
-    uip_ipaddr_copy(&UIP_IP_BUF->srcipaddr, &tmp_ipaddr);
-#endif
   }
   
   UIP_ICMP_BUF->type = type;
@@ -235,8 +196,6 @@ if (uip_ext_len) {
   UIP_IP_BUF->len[1] = ((uip_len - UIP_IPH_LEN) & 0xff);
   UIP_ICMP_BUF->icmpchksum = 0;
   UIP_ICMP_BUF->icmpchksum = ~uip_icmp6chksum();
-
-  UIP_STAT(++uip_stat.icmp.sent);
 
   PRINTF("Sending ICMPv6 ERROR message to");
   PRINT6ADDR(&UIP_IP_BUF->destipaddr);

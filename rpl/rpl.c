@@ -1,7 +1,3 @@
-/**
- * \addtogroup uip6
- * @{
- */
 /*
  * Copyright (c) 2009, Swedish Institute of Computer Science.
  * All rights reserved.
@@ -32,28 +28,18 @@
  *
  * This file is part of the Contiki operating system.
  */
-/**
- * \file
- *         ContikiRPL, an implementation of IETF ROLL RPL.
- *
- * \author Joakim Eriksson <joakime@sics.se>, Nicolas Tsiftes <nvt@sics.se>
- */
 
-#include "net/uip.h"
-#include "net/tcpip.h"
-#include "net/uip-ds6.h"
-#include "net/rpl/rpl-private.h"
-#include "net/neighbor-info.h"
+#include "uip6.h"
+#include "tcpip.h"
+#include "uip-ds6.h"
+#include "rpl/rpl-private.h"
 
 #define DEBUG DEBUG_NONE
-#include "net/uip-debug.h"
+#include "uip-debug.h"
 
 #include <limits.h>
 #include <string.h>
 
-#if RPL_CONF_STATS
-rpl_stats_t rpl_stats;
-#endif
 
 /************************************************************************/
 extern uip_ds6_route_t uip_ds6_routing_table[UIP_DS6_ROUTE_NB];
@@ -129,29 +115,25 @@ rpl_add_route(rpl_dag_t *dag, uip_ipaddr_t *prefix, int prefix_len,
   return rep;
 }
 /************************************************************************/
+/*
 static void
 rpl_link_neighbor_callback(const rimeaddr_t *addr, int known, int etx)
 {
-#if DEBUG
   uip_ipaddr_t ipaddr;
-#endif /* DEBUG */
   rpl_parent_t *parent;
   rpl_instance_t *instance;
   rpl_instance_t *end;
 
-#if DEBUG
   uip_ip6addr(&ipaddr, 0xfe80, 0, 0, 0, 0, 0, 0, 0);
   uip_ds6_set_addr_iid(&ipaddr, (uip_lladdr_t *)addr);
   PRINTF("RPL: Neighbor ");
   PRINT6ADDR(&ipaddr);
   PRINTF(" is %sknown. ETX = %u\n", known ? "" : "no longer ", NEIGHBOR_INFO_FIX2ETX(etx));
-#endif /* DEBUG */
 
   for( instance = &instance_table[0], end = instance + RPL_MAX_INSTANCES; instance < end; ++instance) {
     if ( instance->used == 1 ) {
       parent = rpl_find_parent_any_dag(instance, &ipaddr);
       if(!(parent == NULL)) {
-        /* Trigger DAG rank recalculation. */
         parent->link_metric = etx;
         parent->updated = 1;
         rpl_update_periodic_timer();
@@ -176,6 +158,7 @@ rpl_link_neighbor_callback(const rimeaddr_t *addr, int known, int etx)
     uip_ds6_route_rm_by_nexthop(&ipaddr);
   }
 }
+*/
 /************************************************************************/
 void
 rpl_ipv6_neighbor_callback(uip_ds6_nbr_t *nbr)
@@ -210,15 +193,11 @@ rpl_init(void)
   default_instance=NULL;
 
   rpl_reset_periodic_timer();
-  neighbor_info_subscribe(rpl_link_neighbor_callback);
 
   /* add rpl multicast address */
   uip_create_linklocal_rplnodes_mcast(&rplmaddr);
   uip_ds6_maddr_add(&rplmaddr);
 
-#if RPL_CONF_STATS
-  memset(&rpl_stats, 0, sizeof(rpl_stats));
-#endif
 }
 /************************************************************************/
 int

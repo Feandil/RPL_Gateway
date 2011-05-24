@@ -41,21 +41,19 @@
  */
 
 
-#include "contiki.h"
-#include "net/rpl/rpl-private.h"
-#include "net/uip.h"
-#include "net/uip-nd6.h"
+#include "conf.h"
+#include "rpl/rpl-private.h"
+#include "uip6.h"
+#include "uip-nd6.h"
 #include "lib/list.h"
 #include "lib/memb.h"
-#include "sys/ctimer.h"
+#include "sys/event.h"
 
 #include <limits.h>
 #include <string.h>
 
 #define DEBUG DEBUG_NONE
-#include "net/uip-debug.h"
-
-#include "net/neighbor-info.h"
+#include "uip-debug.h"
 
 /************************************************************************/
 extern rpl_of_t RPL_OF;
@@ -382,8 +380,7 @@ rpl_free_instance(rpl_instance_t *instance)
 
   rpl_set_default_route(instance, NULL);
 
-  ctimer_stop(&instance->dio_timer);
-  ctimer_stop(&instance->dao_timer);
+  ev_periodic_stop(event_loop,&instance->dio_timer.periodic);
 
   if(default_instance == instance) {
     default_instance = NULL;
@@ -555,7 +552,7 @@ rpl_select_dodag(rpl_instance_t * instance, rpl_parent_t *p)
       }
       /* The DAO parent set changed - schedule a DAO transmission. */
       RPL_LOLLIPOP_INCREMENT(instance->dtsn_out);
-      rpl_schedule_dao(instance);
+//      rpl_schedule_dao(instance);
     }
     rpl_reset_dio_timer(instance, 1);
   } else if(best_dag->rank != old_rank) {
@@ -816,7 +813,7 @@ rpl_join_instance(uip_ipaddr_t *from, rpl_dio_t *dio)
   rpl_set_default_route(instance, from);
 
   if(instance->mop != RPL_MOP_NO_DOWNWARD_ROUTES) {
-    rpl_schedule_dao(instance);
+//    rpl_schedule_dao(instance);
   } else {
     PRINTF("RPL: The DIO does not meet the prerequisites for sending a DAO\n");
   }
@@ -1181,7 +1178,7 @@ rpl_process_dio(uip_ipaddr_t *from, rpl_dio_t *dio)
   if(dag->joined&&(p==dag->preferred_parent)) {
     if(should_send_dao(instance, dio, p)) {
       RPL_LOLLIPOP_INCREMENT(instance->dtsn_out);
-      rpl_schedule_dao(instance);
+//      rpl_schedule_dao(instance);
     }
   }
   p->dtsn = dio->dtsn;

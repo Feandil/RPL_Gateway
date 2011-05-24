@@ -1,7 +1,3 @@
-/**
- * \addtogroup uip6
- * @{
- */
 /*
  * Copyright (c) 2010, Swedish Institute of Computer Science.
  * All rights reserved.
@@ -32,19 +28,11 @@
  *
  * This file is part of the Contiki operating system.
  */
-/**
- * \file
- *         An implementation of RPL's objective function 0.
- *
- * \author Joakim Eriksson <joakime@sics.se>, Nicolas Tsiftes <nvt@sics.se>
- */
 
-#include "net/rpl/rpl-private.h"
+#include "rpl/rpl-private.h"
 
 #define DEBUG DEBUG_NONE
-#include "net/uip-debug.h"
-
-#include "net/neighbor-info.h"
+#include "uip-debug.h"
 
 static void reset(rpl_dag_t *);
 static rpl_parent_t *best_parent(rpl_parent_t *, rpl_parent_t *);

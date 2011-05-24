@@ -1,15 +1,3 @@
-/**
- * \addtogroup uip6
- * @{
- */
-
-/**
- * \file
- *         Neighbor discovery (RFC 4861)
- * \author Julien Abeille <jabeille@cisco.com>
- * \author Mathilde Durvy <mdurvy@cisco.com>
- */
-
 /*
  * Copyright (c) 2006, Swedish Institute of Computer Science.
  * All rights reserved.
@@ -45,7 +33,7 @@
 #ifndef __UIP_ND6_H__
 #define __UIP_ND6_H__
 
-#include "net/uip.h"
+#include "uip6.h"
 #include "sys/stimestamp.h"
 /**
  *  \name General 
@@ -56,13 +44,6 @@
 /** \brief INFINITE lifetime */
 #define UIP_ND6_INFINITE_LIFETIME       0xFFFFFFFF
 /** @} */
-
-/** \brief Do not try DAD when using EUI-64 as allowed by draft-ietf-6lowpan-nd-15 section 8.2 */
-#if UIP_CONF_LL_802154
-#define UIP_ND6_DEF_MAXDADNS 0
-#else /* UIP_CONF_LL_802154 */
-#define UIP_ND6_DEF_MAXDADNS 1
-#endif /* UIP_CONF_LL_802154 */
 
 /** \name RFC 4861 Host constant */
 /** @{ */
@@ -142,23 +123,7 @@
 #define UIP_ND6_OPT_MTU_LEN            8
 
 
-/* Length of TLLAO and SLLAO options, it is L2 dependant */
-#if UIP_CONF_LL_802154
-/* If the interface is 802.15.4. For now we use only long addresses */
-#define UIP_ND6_OPT_SHORT_LLAO_LEN     8
-#define UIP_ND6_OPT_LONG_LLAO_LEN      16
-/** \brief length of a ND6 LLAO option for 802.15.4 */
-#define UIP_ND6_OPT_LLAO_LEN UIP_ND6_OPT_LONG_LLAO_LEN
-#else /*UIP_CONF_LL_802154*/
-#if UIP_CONF_LL_80211
-/* If the interface is 802.11 */
-/** \brief length of a ND6 LLAO option for 802.11 */
 #define UIP_ND6_OPT_LLAO_LEN           8
-#else /*UIP_CONF_LL_80211*/
-/** \brief length of a ND6 LLAO option for default L2 type (e.g. Ethernet) */
-#define UIP_ND6_OPT_LLAO_LEN           8
-#endif /*UIP_CONF_LL_80211*/
-#endif /*UIP_CONF_LL_802154*/
 /** @} */
 
 
@@ -341,7 +306,6 @@ uip_nd6_ns_output(uip_ipaddr_t *src, uip_ipaddr_t *dest, uip_ipaddr_t *tgt);
 void
 uip_nd6_na_input(void);
 
-#if UIP_CONF_ROUTER
 #if UIP_ND6_SEND_RA
 /**
  * \brief Process a Router Solicitation
@@ -356,7 +320,6 @@ void uip_nd6_rs_input(void);
  */
 void uip_nd6_ra_output(uip_ipaddr_t *dest);
 #endif /* UIP_ND6_SEND_RA */
-#endif /*UIP_CONF_ROUTER*/
 
 /**
  * \brief Send a Router Solicitation

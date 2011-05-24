@@ -1,7 +1,3 @@
-/**
- * \addtogroup uip6
- * @{
- */
 /*
  * Copyright (c) 2010, Swedish Institute of Computer Science.
  * All rights reserved.
@@ -33,29 +29,20 @@
  * This file is part of the Contiki operating system.
  *
  */
-/**
- * \file
- *         ICMP6 I/O for RPL control messages.
- *
- * \author Joakim Eriksson <joakime@sics.se>, Nicolas Tsiftes <nvt@sics.se>
- * Contributors: Niclas Finne <nfi@sics.se>, Joel Hoglund <joel@sics.se>,
- *               Mathieu Pouillot <m.pouillot@watteco.com>
- */
 
-#include "net/tcpip.h"
-#include "net/uip.h"
-#include "net/uip-ds6.h"
-#include "net/uip-nd6.h"
-#include "net/uip-icmp6.h"
-#include "net/rpl/rpl-private.h"
-#include "net/packetbuf.h"
+#include "tcpip.h"
+#include "uip6.h"
+#include "uip-ds6.h"
+#include "uip-nd6.h"
+#include "uip-icmp6.h"
+#include "rpl/rpl-private.h"
 
 #include <limits.h>
 #include <string.h>
 
 #define DEBUG DEBUG_NONE
 
-#include "net/uip-debug.h"
+#include "uip-debug.h"
 
 /*---------------------------------------------------------------------------*/
 #define RPL_DIO_GROUNDED                 0x80
@@ -186,11 +173,10 @@ dio_input(void)
   PRINT6ADDR(&from);
   PRINTF("\n");
 
-  if((nbr = uip_ds6_nbr_lookup(&from)) == NULL) {
+/*  if((nbr = uip_ds6_nbr_lookup(&from)) == NULL) {
     if((nbr = uip_ds6_nbr_add(&from, (uip_lladdr_t *)
                               packetbuf_addr(PACKETBUF_ADDR_SENDER),
                               0, NBR_REACHABLE)) != NULL) {
-      /* set reachable timer */
       stimestamp_set(&nbr->reachable, UIP_ND6_REACHABLE_TIME / 1000);
       PRINTF("RPL: Neighbor added to neighbor cache ");
       PRINT6ADDR(&from);
@@ -200,7 +186,7 @@ dio_input(void)
     }
   } else {
     PRINTF("RPL: Neighbor already in neighbor cache\n");
-  }
+  } */
 
   buffer_length = uip_len - uip_l2_l3_icmp_hdr_len;
 
@@ -356,16 +342,8 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
 {
   unsigned char *buffer;
   int pos;
-#if !RPL_LEAF_ONLY
   uip_ipaddr_t addr;
-#endif /* !RPL_LEAF_ONLY */
 
-#if RPL_LEAF_ONLY
-  /* only respond to unicast DIS */
-  if(uc_addr == NULL) {
-    return;
-  }
-#endif /* RPL_LEAF_ONLY */
 
   rpl_dag_t *dag = instance->current_dag;
 
@@ -375,13 +353,8 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
   buffer = UIP_ICMP_PAYLOAD;
   buffer[pos++] = instance->instance_id;
   buffer[pos++] = dag->version;
-#if RPL_LEAF_ONLY
-  buffer[pos++] = INFINITE_RANK >> 8;
-  buffer[pos++] = INFINITE_RANK & 0xff;
-#else /* RPL_LEAF_ONLY */
   buffer[pos++] = dag->rank >> 8;
   buffer[pos++] = dag->rank & 0xff;
-#endif /* RPL_LEAF_ONLY */
 
   buffer[pos] = 0;
   if(dag->grounded) {
@@ -404,7 +377,6 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
   memcpy(buffer + pos, &dag->dag_id, sizeof(dag->dag_id));
   pos += 16;
 
-#if !RPL_LEAF_ONLY
   if(instance->mc.type != RPL_DAG_MC_NONE) {
     instance->of->update_metric_container(instance);
 
@@ -428,8 +400,6 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
       return;
     }
   }
-
-#endif /* RPL_LEAF_ONLY */
 
   /* always add a sub-option for DAG configuration */
   buffer[pos++] = RPL_DIO_SUBOPT_DAG_CONF;
@@ -474,13 +444,6 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
 
   /* buffer[len++] = RPL_DIO_SUBOPT_PAD1; */
 
-#if RPL_LEAF_ONLY
-  PRINTF("RPL: Sending unicast-DIO with rank %u to ",
-      (unsigned)dag->rank);
-  PRINT6ADDR(uc_addr);
-  PRINTF("\n");
-  uip_icmp6_send(uc_addr, ICMP6_RPL, RPL_CODE_DIO, pos);
-#else /* RPL_LEAF_ONLY */
   /* Unicast requests get unicast replies! */
   if(uc_addr == NULL) {
     PRINTF("RPL: Sending a multicast-DIO with rank %u\n",
@@ -494,7 +457,6 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
     PRINTF("\n");
     uip_icmp6_send(uc_addr, ICMP6_RPL, RPL_CODE_DIO, pos);
   }
-#endif /* RPL_LEAF_ONLY */
 }
 /*---------------------------------------------------------------------------*/
 static void

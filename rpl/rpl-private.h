@@ -44,13 +44,13 @@
  * so it does not currently support multiple DAGs.
  */
 
-#include "net/rpl/rpl.h"
+#include "rpl/rpl.h"
 
 #include "lib/list.h"
-#include "net/uip.h"
+#include "uip6.h"
 #include "sys/clock.h"
-#include "sys/ctimer.h"
-#include "net/uip-ds6.h"
+#include "sys/event.h"
+#include "uip-ds6.h"
 
 /*---------------------------------------------------------------------------*/
 /** \brief Is IPv6 address a the link local all rpl nodes multicast address */
@@ -89,6 +89,7 @@
 #define RPL_DIO_SUBOPT_TRANSIT           	6
 #define RPL_DIO_SUBOPT_SOLICITED_INFO    	7
 #define RPL_DIO_SUBOPT_PREFIX_INFO       	8
+#define RPL_DIO_SUBOPT_OTHER_DODAG       	9
 
 #define RPL_DAO_K_FLAG                   0x80 /* DAO ACK requested */
 #define RPL_DAO_D_FLAG                   0x40 /* DODAG ID Present */
@@ -127,7 +128,10 @@
 
 #define INFINITE_RANK                   0xffff
 
-#define INITIAL_LINK_METRIC		NEIGHBOR_INFO_ETX2FIX(3)
+#define NEIGHBOR_INFO_ETX_DIVISOR       16
+#define NEIGHBOR_INFO_ETX2FIX(etx)    ((etx) * NEIGHBOR_INFO_ETX_DIVISOR)
+#define NEIGHBOR_INFO_FIX2ETX(fix)    ((fix) / NEIGHBOR_INFO_ETX_DIVISOR)
+#define INITIAL_LINK_METRIC             NEIGHBOR_INFO_ETX2FIX(3)
 
 /* Represents 2^n ms. */
 /* Default value according to the specification is 3 which
@@ -192,6 +196,7 @@
 #define RPL_DIS_INTERVAL                60
 #endif
 #define RPL_DIS_START_DELAY             5
+#define RPL_MAX_PERIODIC                254
 /*---------------------------------------------------------------------------*/
 /* Logical representation of a DAG Information Object (DIO.) */
 struct rpl_dio {
@@ -292,10 +297,10 @@ uip_ds6_route_t *rpl_add_route(rpl_dag_t *dag, uip_ipaddr_t *prefix,
 rpl_of_t *rpl_find_of(rpl_ocp_t);
 
 /* Timer functions. */
-void rpl_schedule_dao(rpl_instance_t *);
 void rpl_reset_dio_timer(rpl_instance_t *, uint8_t);
 void rpl_update_periodic_timer(void);
 void rpl_reset_periodic_timer(void);
+ev_tstamp dio_rescheduler(struct ev_periodic *w, ev_tstamp now);
 
 /* Route poisoning. */
 void rpl_poison_routes(rpl_dag_t *, rpl_parent_t *);

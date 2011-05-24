@@ -1,7 +1,3 @@
-/**
- * \addtogroup uip6
- * @{
- */
 /*
  * Copyright (c) 2010, Swedish Institute of Computer Science.
  * All rights reserved.
@@ -39,21 +35,22 @@
  * \author Joakim Eriksson <joakime@sics.se>, Nicolas Tsiftes <nvt@sics.se>
  */
 
-#include "contiki-conf.h"
-#include "net/rpl/rpl-private.h"
+#include "conf.h"
+#include "rpl/rpl-private.h"
 #include "lib/random.h"
-#include "sys/ctimer.h"
+#include "sys/event.h"
 #include "sys/stimestamp.h"
 
 #define DEBUG DEBUG_NONE
-#include "net/uip-debug.h"
+#include "uip-debug.h"
 
 /************************************************************************/
-static struct ctimer periodic_timer;
+struct ev_timer periodic_timer;
+struct stimestamp next_period;
 
-static void handle_periodic_timer(void *ptr);
+static void handle_periodic_timer(struct ev_loop *loop, struct ev_timer *w, int revents);
 static void new_dio_interval(rpl_instance_t *instance);
-static void handle_dio_timer(void *ptr);
+static void handle_dio_timer(struct ev_loop *loop, struct ev_periodic *w, int revents);
 
 static struct stimestamp next_dis;
 
@@ -62,7 +59,7 @@ static uint8_t dio_send_ok;
 
 /************************************************************************/
 static void
-handle_periodic_timer(void *ptr)
+handle_periodic_timer(struct ev_loop *loop, struct ev_timer *w, int revents)
 {
   uint8_t next_periodic;
 
@@ -74,23 +71,35 @@ handle_periodic_timer(void *ptr)
     if(stimestamp_expired(&next_dis)) {
       stimestamp_set(&next_dis, RPL_DIS_INTERVAL);
       dis_output(NULL);
-      next_periodic = RPL_DIS_INTERVAL;
+      if(!next_periodic) {
+        next_periodic = RPL_DIS_INTERVAL;
+      }
     } else if(!next_periodic) {
       next_periodic = stimestamp_remaining(&next_dis);
     }
   }
 #endif
 
-  if(next_periodic) {
-    ctimer_set(&periodic_timer, next_periodic*CLOCK_SECOND, handle_periodic_timer, NULL);
+  if(!next_periodic) {
+    next_periodic=RPL_MAX_PERIODIC;
   }
+
+  stimestamp_set(&next_period,next_periodic);
+  periodic_timer.repeat=next_periodic;
+  ev_timer_again(event_loop,&periodic_timer);
+}
+/************************************************************************/
+ev_tstamp dio_rescheduler(struct ev_periodic *w, ev_tstamp now)
+{
+  return now + ((rpl_ev_dio_t *)w)->dio_next_delay;
 }
 /************************************************************************/
 void
 rpl_update_periodic_timer(void) {
-  if (timer_expired(&periodic_timer.etimer.timer)
-      || (timer_remaining(&periodic_timer.etimer.timer) > CLOCK_SECOND)) {
-    ctimer_set(&periodic_timer, CLOCK_SECOND, handle_periodic_timer, NULL);
+  if (stimestamp_remaining(&next_period)>1) {
+    stimestamp_set(&next_period,1);
+    periodic_timer.repeat=1;
+    ev_timer_again(event_loop,&periodic_timer);
   }
 }
 /************************************************************************/
@@ -102,8 +111,8 @@ new_dio_interval(rpl_instance_t *instance)
   /* TODO: too small timer intervals for many cases */
   time = 1UL << instance->dio_intcurrent;
 
-  /* Convert from milliseconds to CLOCK_TICKS. */
-  time = (time * CLOCK_SECOND) / 1000;
+  /* Convert from milliseconds to second. */
+  time = time  / 1000;
 
   instance->dio_next_delay = time;
 
@@ -119,33 +128,20 @@ new_dio_interval(rpl_instance_t *instance)
   instance->dio_next_delay -= time;
   instance->dio_send = 1;
 
-#if RPL_CONF_STATS
-  /* keep some stats */
-  instance->dio_totint++;
-  instance->dio_totrecv += instance->dio_counter;
-  ANNOTATE("#A rank=%u.%u(%u),stats=%d %d %d %d,color=%s\n",
-	   DAG_RANK(instance->current_dag->rank, instance),
-           (10 * (instance->current_dag->rank % instance->min_hoprankinc)) / instance->min_hoprankinc,
-           instance->current_dag->version,
-           instance->dio_totint, instance->dio_totsend,
-           instance->dio_totrecv,instance->dio_intcurrent,
-	   instance->current_dag->rank == ROOT_RANK(instance) ? "BLUE" : "ORANGE");
-#endif /* RPL_CONF_STATS */
-
   /* reset the redundancy counter */
   instance->dio_counter = 0;
 
   /* schedule the timer */
   PRINTF("RPL: Scheduling DIO timer %lu ticks in future (Interval)\n", time);
-  ctimer_set(&instance->dio_timer, time, &handle_dio_timer, instance);
+  ev_periodic_again(event_loop,&instance->dio_timer.periodic);
 }
 /************************************************************************/
 static void
-handle_dio_timer(void *ptr)
+handle_dio_timer(struct ev_loop *loop, struct ev_periodic *w, int revents)
 {
   rpl_instance_t *instance;
 
-  instance = (rpl_instance_t *)ptr;
+  instance = ((rpl_ev_dio_t *)w)->instance;
 
   PRINTF("RPL: DIO Timer triggered\n");
   if(!dio_send_ok) {
@@ -153,7 +149,8 @@ handle_dio_timer(void *ptr)
       dio_send_ok = 1;
     } else {
       PRINTF("RPL: Postponing DIO transmission since link local address is not ok\n");
-      ctimer_set(&instance->dio_timer, CLOCK_SECOND, &handle_dio_timer, instance);
+      instance->dio_timer.dio_next_delay=CLOCK_SECOND;
+      ev_periodic_again(event_loop,&instance->dio_timer.periodic);
       return;
     }
   }
@@ -161,9 +158,6 @@ handle_dio_timer(void *ptr)
   if(instance->dio_send) {
     /* send DIO if counter is less than desired redundancy */
     if(instance->dio_counter < instance->dio_redundancy) {
-#if RPL_CONF_STATS
-      instance->dio_totsend++;
-#endif /* RPL_CONF_STATS */
       dio_output(instance, NULL);
     } else {
       PRINTF("RPL: Supressing DIO transmission (%d >= %d)\n",
@@ -172,7 +166,7 @@ handle_dio_timer(void *ptr)
     instance->dio_send = 0;
     PRINTF("RPL: Scheduling DIO timer %"PRIu32" ticks in future (sent)\n",
            instance->dio_next_delay);
-    ctimer_set(&instance->dio_timer, instance->dio_next_delay, handle_dio_timer, instance);
+     ev_periodic_again(event_loop,&instance->dio_timer.periodic);
   } else {
     /* check if we need to double interval */
     if(instance->dio_intcurrent < instance->dio_intmin + instance->dio_intdoubl) {
@@ -187,67 +181,28 @@ void
 rpl_reset_periodic_timer(void)
 {
   stimestamp_set(&next_dis, RPL_DIS_INTERVAL - RPL_DIS_START_DELAY);
-  ctimer_set(&periodic_timer, CLOCK_SECOND, handle_periodic_timer, NULL);
+  if (ev_is_active(&periodic_timer)) {
+    periodic_timer.repeat=1;
+    ev_timer_again(event_loop,&periodic_timer);
+  } else {
+    ev_timer_init(&periodic_timer,handle_periodic_timer,1,1);
+    ev_timer_start(event_loop,&periodic_timer);
+  }
 }
 /************************************************************************/
 /* Resets the DIO timer in the instance to its minimal interval. */
 void
 rpl_reset_dio_timer(rpl_instance_t *instance, uint8_t force)
 {
-#if !RPL_LEAF_ONLY
   /* only reset if not just reset or started */
   if(force || instance->dio_intcurrent > instance->dio_intmin) {
     instance->dio_counter = 0;
     instance->dio_intcurrent = instance->dio_intmin;
+    if (!ev_is_active(&instance->dio_timer.periodic)) {
+      ev_periodic_init(&instance->dio_timer.periodic,handle_dio_timer,1,1,0);
+      ev_periodic_start(event_loop,&instance->dio_timer.periodic);
+    }
     new_dio_interval(instance);
-  }
-#if RPL_CONF_STATS
-  rpl_stats.resets++;
-#endif /* RPL_CONF_STATS */
-#endif /* RPL_LEAF_ONLY */
-}
-/************************************************************************/
-static void
-handle_dao_timer(void *ptr)
-{
-  rpl_instance_t *instance;
-
-  instance = (rpl_instance_t *)ptr;
-
-  if (!dio_send_ok && uip_ds6_get_link_local(ADDR_PREFERRED) == NULL) {
-    PRINTF("RPL: Postpone DAO transmission... \n");
-    ctimer_set(&instance->dao_timer, CLOCK_SECOND, handle_dao_timer, instance);
-    return;
-  }
-
-  /* Send the DAO to the best parent. rpl-07 section C.2 lists the
-     fan-out as being under investigation. */
-  if(instance->current_dag->preferred_parent != NULL) {
-    PRINTF("RPL: handle_dao_timer - sending DAO\n");
-    /* set time to maxtime */
-    dao_output(instance->current_dag->preferred_parent, instance->lifetime_unit * 0xffUL);
-  } else {
-    PRINTF("RPL: Could not find a parent to send a DAO to \n");
-  }
-  ctimer_stop(&instance->dao_timer);
-}
-/************************************************************************/
-void
-rpl_schedule_dao(rpl_instance_t *instance)
-{
-  clock_time_t expiration_time;
-
-  expiration_time = etimer_expiration_time(&instance->dao_timer.etimer);
-
-  if(!etimer_expired(&instance->dao_timer.etimer)) {
-    PRINTF("RPL: DAO timer already scheduled\n");
-  } else {
-    expiration_time = DEFAULT_DAO_LATENCY / 2 +
-      (random_rand() % (DEFAULT_DAO_LATENCY));
-    PRINTF("RPL: Scheduling DAO timer %u ticks in the future\n",
-           (unsigned)expiration_time);
-    ctimer_set(&instance->dao_timer, expiration_time,
-               handle_dao_timer, instance);
   }
 }
 /************************************************************************/

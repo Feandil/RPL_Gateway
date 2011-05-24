@@ -42,7 +42,7 @@
 #ifndef UIP_DEBUG_H
 #define UIP_DEBUG_H
 
-#include "net/uip.h"
+#include "uip6.h"
 #include <stdio.h>
 
 void uip_debug_ipaddr_print(const uip_ipaddr_t *addr);
