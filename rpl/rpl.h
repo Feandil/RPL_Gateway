@@ -213,18 +213,6 @@ typedef struct rpl_metric_container rpl_metric_container_t;
 struct rpl_instance;
 struct rpl_dag;
 /*---------------------------------------------------------------------------*/
-struct rpl_parent {
-  struct rpl_parent *next;
-  struct rpl_dag *dag;
-  rpl_metric_container_t mc;
-  uip_ipaddr_t addr;
-  rpl_rank_t rank;
-  uint8_t link_metric;
-  uint8_t dtsn;
-  uint8_t updated;
-};
-typedef struct rpl_parent rpl_parent_t;
-/*---------------------------------------------------------------------------*/
 /* RPL DIO prefix suboption */
 struct rpl_prefix {
   uip_ipaddr_t prefix;
@@ -244,11 +232,8 @@ struct rpl_dag {
   uint8_t used;
   /* live data for the DAG */
   uint8_t joined;
-  rpl_parent_t *preferred_parent;
   rpl_rank_t rank;
   struct rpl_instance *instance;
-  void *parent_list;
-  list_t parents;
   rpl_prefix_t prefix_info;
 };
 typedef struct rpl_dag rpl_dag_t;
@@ -291,10 +276,6 @@ typedef struct rpl_instance rpl_instance_t;
  */
 struct rpl_of {
   void (*reset)(struct rpl_dag *);
-  void (*parent_state_callback)(rpl_parent_t *, int, int);
-  rpl_parent_t *(*best_parent)(rpl_parent_t *, rpl_parent_t *);
-  rpl_dag_t *(*best_dag)(rpl_dag_t *, rpl_dag_t *);
-  rpl_rank_t (*calculate_rank)(rpl_parent_t *, rpl_rank_t);
   void (*update_metric_container)( rpl_instance_t *);
   rpl_ocp_t ocp;
 };
@@ -318,7 +299,6 @@ struct rpl_instance {
   uint8_t used;
   rpl_dag_t dag_table[RPL_MAX_DODAG_PER_INSTANCE];
   /* The current default router - used for routing "upwards" */
-  uip_ds6_defrt_t *def_route;
   uint8_t dtsn_out;
   uint8_t mop;
   uint8_t dio_intdoubl;
@@ -332,7 +312,6 @@ struct rpl_instance {
   uint8_t dio_send; /* for keeping track of which mode the timer is in 
 */
   uint8_t dio_counter;
-  uint32_t dio_next_delay; /* delay for completion of dio interval */
   struct rpl_ev_dio_t dio_timer;
 };
 
@@ -342,7 +321,6 @@ void rpl_init(void);
 rpl_dag_t *rpl_set_root(uint8_t instance_id, uip_ipaddr_t * dag_id);
 int rpl_set_prefix(rpl_dag_t *dag, uip_ipaddr_t *prefix, int len);
 int rpl_repair_root(uint8_t instance_id);
-int rpl_set_default_route(rpl_instance_t *instance, uip_ipaddr_t *from);
 rpl_dag_t *rpl_get_any_dag(void);
 rpl_dag_t *rpl_get_dodag(uint8_t instance_id,uip_ipaddr_t * dag_id);
 rpl_instance_t *rpl_get_instance(uint8_t instance_id);

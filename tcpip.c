@@ -41,12 +41,11 @@
  */
 #include "tcpip.h"
 
-#include "uip-nd6.h"
 #include "uip-ds6.h"
 #include "ttyConnection.h"
 #include "tun.h"
 
-#define DEBUG 0
+#define DEBUG 1
 #include "uip-debug.h"
 
 #define UIP_ICMP_BUF ((struct uip_icmp_hdr *)&uip_buf[UIP_LLIPH_LEN + uip_ext_len])

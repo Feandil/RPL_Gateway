@@ -41,72 +41,27 @@
 #include "sys/event.h"
 #include "sys/stimestamp.h"
 
-#define DEBUG DEBUG_NONE
+#define DEBUG 1
 #include "uip-debug.h"
 
 /************************************************************************/
-struct ev_timer periodic_timer;
-struct stimestamp next_period;
-
-static void handle_periodic_timer(struct ev_loop *loop, struct ev_timer *w, int revents);
 static void new_dio_interval(rpl_instance_t *instance);
 static void handle_dio_timer(struct ev_loop *loop, struct ev_periodic *w, int revents);
-
-static struct stimestamp next_dis;
 
 /* dio_send_ok is true if the node is ready to send DIOs */
 static uint8_t dio_send_ok;
 
 /************************************************************************/
-static void
-handle_periodic_timer(struct ev_loop *loop, struct ev_timer *w, int revents)
-{
-  uint8_t next_periodic;
-
-  next_periodic = rpl_recalculate_ranks();
-
-#ifdef RPL_DIS_SEND
-  /* handle DIS */
-  if(rpl_get_any_dag() == NULL) {
-    if(stimestamp_expired(&next_dis)) {
-      stimestamp_set(&next_dis, RPL_DIS_INTERVAL);
-      dis_output(NULL);
-      if(!next_periodic) {
-        next_periodic = RPL_DIS_INTERVAL;
-      }
-    } else if(!next_periodic) {
-      next_periodic = stimestamp_remaining(&next_dis);
-    }
-  }
-#endif
-
-  if(!next_periodic) {
-    next_periodic=RPL_MAX_PERIODIC;
-  }
-
-  stimestamp_set(&next_period,next_periodic);
-  periodic_timer.repeat=next_periodic;
-  ev_timer_again(event_loop,&periodic_timer);
-}
-/************************************************************************/
 ev_tstamp dio_rescheduler(struct ev_periodic *w, ev_tstamp now)
 {
+  PRINTF("NEXT DELAY : %"PRIu32"\n",((rpl_ev_dio_t *)w)->dio_next_delay);
   return now + ((rpl_ev_dio_t *)w)->dio_next_delay;
-}
-/************************************************************************/
-void
-rpl_update_periodic_timer(void) {
-  if (stimestamp_remaining(&next_period)>1) {
-    stimestamp_set(&next_period,1);
-    periodic_timer.repeat=1;
-    ev_timer_again(event_loop,&periodic_timer);
-  }
 }
 /************************************************************************/
 static void
 new_dio_interval(rpl_instance_t *instance)
 {
-  uint32_t time;
+  unsigned long time;
 
   /* TODO: too small timer intervals for many cases */
   time = 1UL << instance->dio_intcurrent;
@@ -114,7 +69,7 @@ new_dio_interval(rpl_instance_t *instance)
   /* Convert from milliseconds to second. */
   time = time  / 1000;
 
-  instance->dio_next_delay = time;
+  instance->dio_timer.dio_next_delay = time;
 
   /* random number between I/2 and I */
   time = time >> 1;
@@ -125,7 +80,7 @@ new_dio_interval(rpl_instance_t *instance)
    * operate efficiently. Therefore we need to calculate the delay between
    * the randomized time and the start time of the next interval.
    */
-  instance->dio_next_delay -= time;
+  instance->dio_timer.dio_next_delay -= time;
   instance->dio_send = 1;
 
   /* reset the redundancy counter */
@@ -165,7 +120,7 @@ handle_dio_timer(struct ev_loop *loop, struct ev_periodic *w, int revents)
     }
     instance->dio_send = 0;
     PRINTF("RPL: Scheduling DIO timer %"PRIu32" ticks in future (sent)\n",
-           instance->dio_next_delay);
+           instance->dio_timer.dio_next_delay);
      ev_periodic_again(event_loop,&instance->dio_timer.periodic);
   } else {
     /* check if we need to double interval */
@@ -174,19 +129,6 @@ handle_dio_timer(struct ev_loop *loop, struct ev_periodic *w, int revents)
       PRINTF("RPL: DIO Timer interval doubled %d\n", instance->dio_intcurrent);
     }
     new_dio_interval(instance);
-  }
-}
-/************************************************************************/
-void
-rpl_reset_periodic_timer(void)
-{
-  stimestamp_set(&next_dis, RPL_DIS_INTERVAL - RPL_DIS_START_DELAY);
-  if (ev_is_active(&periodic_timer)) {
-    periodic_timer.repeat=1;
-    ev_timer_again(event_loop,&periodic_timer);
-  } else {
-    ev_timer_init(&periodic_timer,handle_periodic_timer,1,1);
-    ev_timer_start(event_loop,&periodic_timer);
   }
 }
 /************************************************************************/
@@ -199,7 +141,7 @@ rpl_reset_dio_timer(rpl_instance_t *instance, uint8_t force)
     instance->dio_counter = 0;
     instance->dio_intcurrent = instance->dio_intmin;
     if (!ev_is_active(&instance->dio_timer.periodic)) {
-      ev_periodic_init(&instance->dio_timer.periodic,handle_dio_timer,1,1,0);
+      ev_periodic_init(&instance->dio_timer.periodic,handle_dio_timer,0,0,dio_rescheduler);
       ev_periodic_start(event_loop,&instance->dio_timer.periodic);
     }
     new_dio_interval(instance);

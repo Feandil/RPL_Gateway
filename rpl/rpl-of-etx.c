@@ -36,18 +36,10 @@
 #include "uip-debug.h"
 
 static void reset(rpl_dag_t *);
-static void parent_state_callback(rpl_parent_t *, int, int);
-static rpl_parent_t *best_parent(rpl_parent_t *, rpl_parent_t *);
-static rpl_dag_t *best_dag(rpl_dag_t *, rpl_dag_t *);
-static rpl_rank_t calculate_rank(rpl_parent_t *, rpl_rank_t);
 static void update_metric_container(rpl_instance_t *);
 
 rpl_of_t rpl_of_etx = {
   reset,
-  parent_state_callback,
-  best_parent,
-  best_dag,
-  calculate_rank,
   update_metric_container,
   1
 };
@@ -71,100 +63,9 @@ rpl_of_t rpl_of_etx = {
 
 typedef uint16_t rpl_path_metric_t;
 
-static rpl_path_metric_t
-calculate_path_metric(rpl_parent_t *p)
-{
-  if(p == NULL || (p->mc.obj.etx == 0 && p->rank > ROOT_RANK(p->dag->instance))) {
-    return MAX_PATH_COST * RPL_DAG_MC_ETX_DIVISOR;
-  }
-  return p->mc.obj.etx + NI_ETX_TO_RPL_ETX(p->link_metric);
-}
-
 static void
 reset(rpl_dag_t *sag)
 {
-}
-
-static void
-parent_state_callback(rpl_parent_t *parent, int known, int etx)
-{
-}
-
-static rpl_rank_t
-calculate_rank(rpl_parent_t *p, rpl_rank_t base_rank)
-{
-  rpl_rank_t new_rank;
-  rpl_rank_t rank_increase;
-
-  if(p == NULL) {
-    if(base_rank == 0) {
-      return INFINITE_RANK;
-    }
-    rank_increase = NEIGHBOR_INFO_FIX2ETX(INITIAL_LINK_METRIC) * DEFAULT_MIN_HOPRANKINC;
-  } else {
-    rank_increase = NEIGHBOR_INFO_FIX2ETX(p->link_metric) * p->dag->instance->min_hoprankinc;
-    if(base_rank == 0) {
-      base_rank = p->rank;
-    }
-  }
-
-  if(INFINITE_RANK - base_rank < rank_increase) {
-    /* Reached the maximum rank. */
-    new_rank = INFINITE_RANK;
-  } else {
-   /* Calculate the rank based on the new rank information from DIO or
-      stored otherwise. */
-    new_rank = base_rank + rank_increase;
-  }
-
-  return new_rank;
-}
-
-static rpl_dag_t *
-best_dag(rpl_dag_t *d1, rpl_dag_t *d2)
-{
-  if(d1->grounded) {
-    if (!d2->grounded) {
-      return d1;
-    }
-  } else if (d2->grounded) {
-    return d2;
-  }
-  if (d1->preference < d2->preference)
-    return d2;
-  else
-    return d1;
-}
-
-static rpl_parent_t *
-best_parent(rpl_parent_t *p1, rpl_parent_t *p2)
-{
-  rpl_dag_t *dag;
-  rpl_path_metric_t min_diff;
-  rpl_path_metric_t p1_metric;
-  rpl_path_metric_t p2_metric;
-
-  dag = p1->dag; /* Both parents must be in the same DAG. */
-
-  min_diff = RPL_DAG_MC_ETX_DIVISOR /
-             PARENT_SWITCH_THRESHOLD_DIV;
-
-  p1_metric = calculate_path_metric(p1);
-  p2_metric = calculate_path_metric(p2);
-
-  /* Maintain stability of the preferred parent in case of similar ranks. */
-  if(p1 == dag->preferred_parent || p2 == dag->preferred_parent) {
-    if(p1_metric < p2_metric + min_diff &&
-       p1_metric > p2_metric - min_diff) {
-      PRINTF("RPL: MRHOF hysteresis: %u <= %u <= %u\n",
-             p2_metric - min_diff,
-             p1_metric,
-             p2_metric + min_diff);
-      return dag->preferred_parent;
-    }
-  }
-
-  return p1_metric < p2_metric ? p1 : p2;
 }
 
 static void
@@ -189,8 +90,6 @@ update_metric_container(rpl_instance_t *instance)
 
   if(dag->rank == ROOT_RANK(instance)) {
     path_metric = 0;
-  } else {
-    path_metric = calculate_path_metric(dag->preferred_parent);
   }
 
 #if RPL_DAG_MC == RPL_DAG_MC_ETX
@@ -210,8 +109,6 @@ update_metric_container(rpl_instance_t *instance)
 
   if(dag->rank == ROOT_RANK(instance)) {
     type = RPL_DAG_MC_ENERGY_TYPE_MAINS;
-  } else {
-    type = RPL_DAG_MC_ENERGY_TYPE_BATTERY;
   }
 
   instance->mc.obj.energy.flags = type << RPL_DAG_MC_ENERGY_TYPE;

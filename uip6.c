@@ -74,7 +74,6 @@
 #include "uip6.h"
 #include "uipopt.h"
 #include "uip-icmp6.h"
-#include "uip-nd6.h"
 #include "uip-ds6.h"
 
 #include <string.h>
@@ -83,7 +82,7 @@
 /* For Debug, logging, statistics                                            */
 /*---------------------------------------------------------------------------*/
 
-#define DEBUG 0
+#define DEBUG 1
 #include "uip-debug.h"
 
 void uip_rpl_input(void);
@@ -402,8 +401,6 @@ uip_process()
         goto send;
       }
 
-      rpl_update_header_empty();
-
       UIP_IP_BUF->ttl = UIP_IP_BUF->ttl - 1;
       PRINTF("Forwarding packet to ");
       PRINT6ADDR(&UIP_IP_BUF->destipaddr);
@@ -550,36 +547,32 @@ uip_process()
    */
   switch(UIP_ICMP_BUF->type) {
     case ICMP6_NS:
-      uip_nd6_ns_input();
+      uip_len = 0;
       break;
     case ICMP6_NA:
-      uip_nd6_na_input();
+      uip_len = 0;
       break;
     case ICMP6_RS:
-#if UIP_ND6_SEND_RA
-    uip_nd6_rs_input();
-#else /* UIP_ND6_SEND_RA */
-    uip_len = 0;
-#endif /* UIP_ND6_SEND_RA */
-    break;
-  case ICMP6_RA:
-    uip_len = 0;
-    break;
-  case ICMP6_RPL:
-    uip_rpl_input();
-    break;
-  case ICMP6_ECHO_REQUEST:
-     uip_icmp6_echo_request_input();
-   break;
-  case ICMP6_ECHO_REPLY:
-    /** \note We don't implement any application callback for now */
-    PRINTF("Received an icmp6 echo reply\n");
-    uip_len = 0;
-    break;
-  default:
-    PRINTF("Unknown icmp6 message type %d\n", UIP_ICMP_BUF->type);
-   uip_len = 0;
-    break;
+      uip_len = 0;
+      break;
+    case ICMP6_RA:
+      uip_len = 0;
+      break;
+    case ICMP6_RPL:
+      uip_rpl_input();
+      break;
+    case ICMP6_ECHO_REQUEST:
+      uip_icmp6_echo_request_input();
+      break;
+    case ICMP6_ECHO_REPLY:
+      /** \note We don't implement any application callback for now */
+      PRINTF("Received an icmp6 echo reply\n");
+      uip_len = 0;
+      break;
+    default:
+      PRINTF("Unknown icmp6 message type %d\n", UIP_ICMP_BUF->type);
+      uip_len = 0;
+      break;
   }
 
   if(uip_len > 0) {

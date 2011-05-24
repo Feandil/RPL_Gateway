@@ -34,7 +34,7 @@
 #include "uip-ds6.h"
 #include "rpl/rpl-private.h"
 
-#define DEBUG DEBUG_NONE
+#define DEBUG 1
 #include "uip-debug.h"
 
 #include <limits.h>
@@ -115,84 +115,12 @@ rpl_add_route(rpl_dag_t *dag, uip_ipaddr_t *prefix, int prefix_len,
   return rep;
 }
 /************************************************************************/
-/*
-static void
-rpl_link_neighbor_callback(const rimeaddr_t *addr, int known, int etx)
-{
-  uip_ipaddr_t ipaddr;
-  rpl_parent_t *parent;
-  rpl_instance_t *instance;
-  rpl_instance_t *end;
-
-  uip_ip6addr(&ipaddr, 0xfe80, 0, 0, 0, 0, 0, 0, 0);
-  uip_ds6_set_addr_iid(&ipaddr, (uip_lladdr_t *)addr);
-  PRINTF("RPL: Neighbor ");
-  PRINT6ADDR(&ipaddr);
-  PRINTF(" is %sknown. ETX = %u\n", known ? "" : "no longer ", NEIGHBOR_INFO_FIX2ETX(etx));
-
-  for( instance = &instance_table[0], end = instance + RPL_MAX_INSTANCES; instance < end; ++instance) {
-    if ( instance->used == 1 ) {
-      parent = rpl_find_parent_any_dag(instance, &ipaddr);
-      if(!(parent == NULL)) {
-        parent->link_metric = etx;
-        parent->updated = 1;
-        rpl_update_periodic_timer();
-
-        if(instance->of->parent_state_callback != NULL) {
-          instance->of->parent_state_callback(parent, known, etx);
-        }
-        if(!known) {
-          PRINTF("RPL: Removing parent ");
-          PRINT6ADDR(&parent->addr);
-          PRINTF(" in instance %u because of bad connectivity (ETX %d)\n", instance->instance_id, etx);
-          parent->rank = INFINITE_RANK;
-        }
-      }
-    }
-  }
-
-  if (!known) {
-    PRINTF("RPL: Deleting routes installed by DAOs received from ");
-    PRINT6ADDR(&ipaddr);
-    PRINTF("\n");
-    uip_ds6_route_rm_by_nexthop(&ipaddr);
-  }
-}
-*/
-/************************************************************************/
-void
-rpl_ipv6_neighbor_callback(uip_ds6_nbr_t *nbr)
-{
-  rpl_parent_t *p;
-  rpl_instance_t *instance;
-  rpl_instance_t *end;
-
-  if(!nbr->isused) {
-    PRINTF("RPL: Removing neighbor ");
-    PRINT6ADDR(&nbr->ipaddr);
-    PRINTF("\n");
-    for( instance = &instance_table[0], end = instance + RPL_MAX_INSTANCES; instance < end; ++instance) {
-      if ( instance->used == 1 ) {
-        p = rpl_find_parent_any_dag(instance, &nbr->ipaddr);
-        if(p != NULL) {
-          p->rank = INFINITE_RANK;
-          /* Trigger DAG rank recalculation. */
-          p->updated = 1;
-          rpl_update_periodic_timer();
-        }
-      }
-    }
-  }
-}
-/************************************************************************/
 void
 rpl_init(void)
 {
   uip_ipaddr_t rplmaddr;
   PRINTF("RPL started\n");
   default_instance=NULL;
-
-  rpl_reset_periodic_timer();
 
   /* add rpl multicast address */
   uip_create_linklocal_rplnodes_mcast(&rplmaddr);
@@ -256,108 +184,6 @@ rpl_verify_header(int uip_ext_opt_offset)
     }
   }
     PRINTF("RPL: rank Ok\n");
-  return 0;
-}
-/************************************************************************/
-void
-rpl_update_header_empty(void)
-{
-  rpl_instance_t *instance;
-  int uip_ext_opt_offset;
-  int last_uip_ext_len;
-  u8_t temp_len;
-
-  last_uip_ext_len=uip_ext_len;
-  uip_ext_len=0;
-  uip_ext_opt_offset = 2;
-
-  PRINTF("RPL: Verifying the presence of the RPL header option\n");
-  switch(UIP_IP_BUF->proto){
-    case UIP_PROTO_HBHO:
-      if (UIP_HBHO_BUF->len != RPL_OP_BY_OP_LEN - 8) {
-        PRINTF("RPL: Non RPL Hop-by-hop options support not implemented\n");
-        uip_ext_len=last_uip_ext_len;
-        return;
-      }
-      instance = rpl_get_instance(UIP_EXT_HDR_OPT_RPL_BUF->instance);
-      if(instance == NULL || (!instance->used) || (!instance->current_dag->joined) ) {
-        PRINTF("Unable to add RPL hop-by-hop extension header : incorrect instance\n");
-        return;
-      }
-      break;
-    default:
-      PRINTF("RPL: No Hop-by-Hop Option found, creating it\n");
-      if(uip_len + RPL_OP_BY_OP_LEN >UIP_LINK_MTU) {
-        PRINTF("RPL: Packet too long : impossible to add rpl Hop-by-Hop option\n");
-        uip_ext_len=last_uip_ext_len;
-        return;
-      }
-      memmove(UIP_HBHO_NEXT_BUF,UIP_EXT_BUF,uip_len-UIP_IPH_LEN);
-      memset(UIP_HBHO_BUF,0,RPL_OP_BY_OP_LEN);
-      UIP_HBHO_BUF->next=UIP_IP_BUF->proto;
-      UIP_IP_BUF->proto=UIP_PROTO_HBHO;
-      UIP_HBHO_BUF->len=RPL_OP_BY_OP_LEN - 8;
-      UIP_EXT_HDR_OPT_RPL_BUF->opt_type=UIP_EXT_HDR_OPT_RPL;
-      UIP_EXT_HDR_OPT_RPL_BUF->opt_len=RPL_HDR_OPT_LEN;
-      UIP_EXT_HDR_OPT_RPL_BUF->flags=0;
-      UIP_EXT_HDR_OPT_RPL_BUF->instance=0;
-      UIP_EXT_HDR_OPT_RPL_BUF->senderrank=0;
-      uip_len+=RPL_OP_BY_OP_LEN;
-      temp_len=UIP_IP_BUF->len[1];
-      UIP_IP_BUF->len[1]+=(UIP_HBHO_BUF->len + 8);
-      if (UIP_IP_BUF->len[1]<temp_len) {
-        UIP_IP_BUF->len[0]+=1;
-      }
-      uip_ext_len=last_uip_ext_len+RPL_OP_BY_OP_LEN;
-      return;
-  }
-  switch (UIP_EXT_HDR_OPT_BUF->type) {
-    case UIP_EXT_HDR_OPT_RPL:
-      PRINTF("RPL: Updating RPL option\n");
-      UIP_EXT_HDR_OPT_RPL_BUF->senderrank=instance->current_dag->rank;
-      uip_ext_len=last_uip_ext_len;
-      return;
-    default:
-      PRINTF("RPL: Multi Hop-by-hop options not implemented\n");
-      uip_ext_len=last_uip_ext_len;
-      return;
-  }
-}
-/************************************************************************/
-int
-rpl_update_header_final(uip_ipaddr_t *addr)
-{
-  int uip_ext_opt_offset;
-  int last_uip_ext_len;
-
-  last_uip_ext_len=uip_ext_len;
-  uip_ext_len=0;
-  uip_ext_opt_offset = 2;
-  rpl_parent_t *parent;
-
-  if (UIP_IP_BUF->proto == UIP_PROTO_HBHO){
-    if (UIP_HBHO_BUF->len != RPL_OP_BY_OP_LEN - 8) {
-      PRINTF("RPL: Non RPL Hop-by-hop options support not implemented\n");
-      uip_ext_len=last_uip_ext_len;
-      return 0;
-    }
-    if (UIP_EXT_HDR_OPT_BUF->type == UIP_EXT_HDR_OPT_RPL) {
-      if (UIP_EXT_HDR_OPT_RPL_BUF->senderrank==0) {
-        PRINTF("RPL: Updating RPL option\n");
-        if(default_instance == NULL || (!default_instance->used) || (!default_instance->current_dag->joined) ) {
-          PRINTF("Unable to add RPL hop-by-hop extension header : incorrect default instance\n");
-          return 1;
-        }
-        parent=rpl_find_parent(default_instance->current_dag,addr);
-        if (parent == NULL || (parent != parent->dag->preferred_parent)) {
-          UIP_EXT_HDR_OPT_RPL_BUF->flags=RPL_HDR_OPT_DOWN;
-        }
-        UIP_EXT_HDR_OPT_RPL_BUF->instance=default_instance->instance_id;
-        UIP_EXT_HDR_OPT_RPL_BUF->senderrank=default_instance->current_dag->rank;
-        uip_ext_len=last_uip_ext_len;
-      }
-    }
-  }
   return 0;
 }
 /************************************************************************/

@@ -30,27 +30,15 @@
 #include <string.h>
 #include <stdlib.h>
 #include "lib/random.h"
-#include "uip-nd6.h"
 #include "uip-ds6.h"
 #include "sys/event.h"
 
-#define DEBUG DEBUG_NONE
+#define DEBUG 1
 #include "uip-debug.h"
-
-struct ev_timer uip_ds6_timer_periodic;                                /** \brief Timer for maintenance of data structures */
-struct stimestamp next_timer;
-
-#if UIP_ND6_SEND_RA
-static uint8_t racount;                                         /** \brief number of RA already sent */
-static uint16_t rand_time;                                      /** \brief random time value for timers */
-struct stimer uip_ds6_timer_ra;                                 /** \brief RA timer, to schedule RA sending */
-#endif
 
 /** \name "DS6" Data structures */
 /** @{ */
 uip_ds6_netif_t uip_ds6_if;                                       /** \brief The single interface */
-uip_ds6_nbr_t uip_ds6_nbr_cache[UIP_DS6_NBR_NB];                  /** \brief Neighor cache */
-uip_ds6_defrt_t uip_ds6_defrt_list[UIP_DS6_DEFRT_NB];             /** \brief Default rt list */
 uip_ds6_prefix_t uip_ds6_prefix_list[UIP_DS6_PREFIX_NB];          /** \brief Prefix list */
 uip_ds6_route_t uip_ds6_routing_table[UIP_DS6_ROUTE_NB];          /** \brief Routing table */
 
@@ -60,19 +48,14 @@ uip_ds6_route_t uip_ds6_routing_table[UIP_DS6_ROUTE_NB];          /** \brief Rou
 static uip_ipaddr_t loc_fipaddr;
 
 /* Pointers used in this file */
-static uip_ipaddr_t *locipaddr;
 static uip_ds6_addr_t *locaddr;
 static uip_ds6_maddr_t *locmaddr;
 static uip_ds6_aaddr_t *locaaddr;
 static uip_ds6_prefix_t *locprefix;
-static uip_ds6_nbr_t *locnbr;
-static uip_ds6_defrt_t *locdefrt;
 static uip_ds6_route_t *locroute;
 
 /* uint8_t used in this file */
 static uint8_t loc_loop_state;
-
-void rpl_ipv6_neighbor_callback(uip_ds6_nbr_t *nbr);
 
 /*---------------------------------------------------------------------------*/
 void
@@ -82,8 +65,6 @@ uip_ds6_init(void)
   PRINTF("%u neighbors\n%u default routers\n%u prefixes\n%u routes\n%u unicast addresses\n%u multicast addresses\n%u anycast addresses\n",
      UIP_DS6_NBR_NB, UIP_DS6_DEFRT_NB, UIP_DS6_PREFIX_NB, UIP_DS6_ROUTE_NB,
      UIP_DS6_ADDR_NB, UIP_DS6_MADDR_NB, UIP_DS6_AADDR_NB);
-  memset(uip_ds6_nbr_cache, 0, sizeof(uip_ds6_nbr_cache));
-  memset(uip_ds6_defrt_list, 0, sizeof(uip_ds6_defrt_list));
   memset(uip_ds6_prefix_list, 0, sizeof(uip_ds6_prefix_list));
   memset(&uip_ds6_if, 0, sizeof(uip_ds6_if));
   memset(uip_ds6_routing_table, 0, sizeof(uip_ds6_routing_table));
@@ -91,9 +72,6 @@ uip_ds6_init(void)
   /* Set interface parameters */
   uip_ds6_if.link_mtu = UIP_LINK_MTU;
   uip_ds6_if.cur_hop_limit = UIP_TTL;
-  uip_ds6_if.base_reachable_time = UIP_ND6_REACHABLE_TIME;
-  uip_ds6_if.reachable_time = uip_ds6_compute_reachable_time();
-  uip_ds6_if.retrans_timer = UIP_ND6_RETRANS_TIMER;
   uip_ds6_if.maxdadns = 0;
 
   /* Create link local address, prefix, multicast addresses, anycast addresses */
@@ -106,121 +84,10 @@ uip_ds6_init(void)
   uip_ds6_maddr_add(&loc_fipaddr);
   uip_create_linklocal_allrouters_mcast(&loc_fipaddr);
   uip_ds6_maddr_add(&loc_fipaddr);
-#if UIP_ND6_SEND_RA
-  stimer_set(&uip_ds6_timer_ra, 2);     /* wait to have a link local IP address */
-#endif /* UIP_ND6_SEND_RA */
   PRINTF("DS: init set timer to %u\n",UIP_DS6_PERIOD);
-  stimestamp_set(&next_timer,UIP_DS6_PERIOD);
-  ev_timer_init(&uip_ds6_timer_periodic,uip_ds6_periodic,0,UIP_DS6_PERIOD);
-  ev_timer_start(event_loop,&uip_ds6_timer_periodic);
   return;
 }
 
-
-/*--------------------------------------------------------------------------*/
-void
-uip_ds6_periodic(struct ev_loop *loop, struct ev_timer *w, int revents)
-{
-  clock_time_t next_period=UIP_DS6_MAX_PERIOD;
-  clock_time_t temp_next;
-
-  /* Periodic processing on neighbors */
-  for(locnbr = uip_ds6_nbr_cache;
-      locnbr < uip_ds6_nbr_cache + UIP_DS6_NBR_NB;
-      locnbr++) {
-    if(locnbr->isused) {
-      switch(locnbr->state) {
-      case NBR_INCOMPLETE:
-        if(locnbr->nscount >= UIP_ND6_MAX_MULTICAST_SOLICIT) {
-          if((locdefrt = uip_ds6_defrt_lookup(&locnbr->ipaddr)) != NULL) {
-            uip_ds6_defrt_rm(locdefrt);
-          }
-          uip_ds6_route_rm_by_nexthop(&locnbr->ipaddr);
-          uip_ds6_nbr_rm(locnbr);
-        } else if(stimestamp_expired(&locnbr->sendns)) {
-          locnbr->nscount++;
-          PRINTF("NBR_INCOMPLETE: NS %u\n", locnbr->nscount);
-          uip_nd6_ns_output(NULL, NULL, &locnbr->ipaddr);
-          stimestamp_set(&locnbr->sendns, uip_ds6_if.retrans_timer / 1000);
-          if ((next_period==0)
-              || ((temp_next=stimestamp_remaining(&locnbr->sendns)) < next_period)) {
-            next_period=temp_next;
-          }
-        } else if ((next_period==0)
-           || ((temp_next=stimestamp_remaining(&locnbr->sendns)) < next_period)) {
-          next_period=temp_next;
-        }
-        break;
-      case NBR_REACHABLE:
-        if(stimestamp_expired(&locnbr->reachable)) {
-          PRINTF("REACHABLE: moving to STALE (");
-          PRINT6ADDR(&locnbr->ipaddr);
-          PRINTF(")\n");
-          locnbr->state = NBR_STALE;
-        }
-        break;
-      case NBR_DELAY:
-        if(stimestamp_expired(&locnbr->reachable)) {
-          locnbr->state = NBR_PROBE;
-          locnbr->nscount = 1;
-          PRINTF("DELAY: moving to PROBE + NS %u\n", locnbr->nscount);
-          uip_nd6_ns_output(NULL, &locnbr->ipaddr, &locnbr->ipaddr);
-          stimestamp_set(&locnbr->sendns, uip_ds6_if.retrans_timer / 1000);
-          if ((next_period==0)
-              || ((temp_next=stimestamp_remaining(&locnbr->sendns)) < next_period)) {
-            next_period=temp_next;
-          }
-        } else if ((next_period==0)
-           || ((temp_next=stimestamp_remaining(&locnbr->reachable)) < next_period)) {
-          next_period=temp_next;
-        }
-        break;
-      case NBR_PROBE:
-        if(locnbr->nscount >= UIP_ND6_MAX_UNICAST_SOLICIT) {
-          PRINTF("PROBE END (FAILED)\n");
-          if((locdefrt = uip_ds6_defrt_lookup(&locnbr->ipaddr)) != NULL) {
-            uip_ds6_defrt_rm(locdefrt);
-          }
-          uip_ds6_route_rm_by_nexthop(&locnbr->ipaddr);
-          uip_ds6_nbr_rm(locnbr);
-        } else if(stimestamp_expired(&locnbr->sendns)) {
-          locnbr->nscount++;
-          PRINTF("PROBE: NS %u\n", locnbr->nscount);
-          uip_nd6_ns_output(NULL, &locnbr->ipaddr, &locnbr->ipaddr);
-          stimestamp_set(&locnbr->sendns, uip_ds6_if.retrans_timer / 1000);
-          if ((next_period==0)
-              || ((temp_next=stimestamp_remaining(&locnbr->sendns)) < next_period)) {
-            next_period=temp_next;
-          }
-        } else if ((next_period==0)
-           || ((temp_next=stimestamp_remaining(&locnbr->sendns)) < next_period)) {
-          next_period=temp_next;
-
-        }
-        break;
-      default:
-        break;
-      }
-    }
-  }
-
-#if UIP_ND6_SEND_RA
-  /* Periodic RA sending */
-  if(stimer_expired(&uip_ds6_timer_ra)) {
-    uip_ds6_send_ra_periodic();
-  } else if((next_period==0)
-     || ((temp_next=stimer_remaining(&uip_ds6_timer_ra)) < next_period)) {
-   next_period=temp_next;
-  }
-#endif /* UIP_ND6_SEND_RA */
-  PRINTF("DS: periodic set timer to %lu\n",next_period);
-  stimestamp_set(&next_timer,next_period);
-  w->repeat=next_period;
-  ev_timer_again(event_loop,w);
-  return;
-}
-
-/*---------------------------------------------------------------------------*/
 uint8_t
 uip_ds6_list_loop(uip_ds6_element_t *list, uint8_t size,
                   uint16_t elementsize, uip_ipaddr_t *ipaddr,
@@ -266,9 +133,6 @@ uip_ds6_list_clean(uip_ds6_timed_element_t *list, uint8_t size,
           case UIP_DS6_ADDR:
             uip_ds6_addr_rm((uip_ds6_addr_t *)element);
             break;
-          case UIP_DS6_DEFRT:
-            uip_ds6_defrt_rm((uip_ds6_defrt_t *)element);
-            break;
           case UIP_DS6_PREFIX:
             uip_ds6_prefix_rm((uip_ds6_prefix_t *)element);
             break;
@@ -286,249 +150,6 @@ uip_ds6_list_clean(uip_ds6_timed_element_t *list, uint8_t size,
   *out_element = NULL;
   return NOSPACE;
 }
-
-/*---------------------------------------------------------------------------*/
-uip_ds6_nbr_t *
-uip_ds6_nbr_add(uip_ipaddr_t *ipaddr, uip_lladdr_t * lladdr,
-                uint8_t isrouter, uint8_t state)
-{
-  loc_loop_state = uip_ds6_list_loop
-     ((uip_ds6_element_t *)uip_ds6_nbr_cache, UIP_DS6_NBR_NB,
-      sizeof(uip_ds6_nbr_t), ipaddr, 128,
-      (uip_ds6_element_t **)&locnbr);
-
-  if(loc_loop_state == NOSPACE) {
-    uip_ds6_nbr_t *n;
-    clock_time_t oldest_time;
-
-    locnbr = NULL;
-    oldest_time = clock_time();
-
-    for(n = uip_ds6_nbr_cache;
-        n < &uip_ds6_nbr_cache[UIP_DS6_NBR_NB];
-        n++) {
-      if(n->isused) {
-        if(n->last_lookup < oldest_time) {
-          locnbr = n;
-          oldest_time = n->last_lookup;
-        }
-      }
-    }
-    if(locnbr != NULL) {
-      uip_ds6_nbr_rm(locnbr);
-      loc_loop_state = FREESPACE;
-    }
-  }
-
-  if(loc_loop_state == FREESPACE) {
-    locnbr->isused = 1;
-    uip_ipaddr_copy(&locnbr->ipaddr, ipaddr);
-    if(lladdr != NULL) {
-      memcpy(&locnbr->lladdr, lladdr, UIP_LLADDR_LEN);
-    } else {
-      memset(&locnbr->lladdr, 0, UIP_LLADDR_LEN);
-    }
-    locnbr->isrouter = isrouter;
-    locnbr->state = state;
-    /* timestamps are set separately, for now we put them in expired state */
-    stimestamp_set(&locnbr->reachable, 0);
-    stimestamp_set(&locnbr->sendns, 0);
-    locnbr->nscount = 0;
-    PRINTF("Adding neighbor with ip addr ");
-    PRINT6ADDR(ipaddr);
-    PRINTF("link addr ");
-    PRINTLLADDR((&(locnbr->lladdr)));
-    PRINTF("state %u\n", state);
-    rpl_ipv6_neighbor_callback(locnbr);
-    locnbr->last_lookup = clock_time();
-    if ((state == NBR_INCOMPLETE)
-        && (stimestamp_remaining(&next_timer) > UIP_DS6_PERIOD)) {
-      PRINTF("DS: addd set timer to %u\n",UIP_DS6_PERIOD);
-      stimestamp_set(&next_timer,UIP_DS6_PERIOD);
-      uip_ds6_timer_periodic.repeat=UIP_DS6_PERIOD;
-      ev_timer_again(event_loop,&uip_ds6_timer_periodic);
-    }
-    return locnbr;
-  }
-  PRINTF("uip_ds6_nbr_add drop\n");
-  return NULL;
-}
-
-/*---------------------------------------------------------------------------*/
-void
-uip_ds6_nbr_rm(uip_ds6_nbr_t *nbr)
-{
-  if(nbr != NULL) {
-    nbr->isused = 0;
-    rpl_ipv6_neighbor_callback(nbr);
-  }
-  return;
-}
-
-/*---------------------------------------------------------------------------*/
-void
-uip_ds6_nbr_nud(uip_ds6_nbr_t *nbr)
-{
-  clock_time_t temp_next;
-
-  if(nbr->state == NBR_STALE) {
-    nbr->state = NBR_DELAY;
-    stimestamp_set(&(nbr->reachable), UIP_ND6_DELAY_FIRST_PROBE_TIME);
-    nbr->nscount = 0;
-    PRINTF("tcpip_ipv6_output: nbr cache entry stale moving to delay\n");
-    temp_next=stimestamp_remaining(&nbr->reachable);
-    if (stimestamp_remaining(&next_timer) > temp_next) {
-      PRINTF("DS: addd set timer to %u\n", temp_next);
-      stimestamp_set(&next_timer, temp_next);
-      uip_ds6_timer_periodic.repeat = temp_next;
-      ev_timer_again(event_loop,&uip_ds6_timer_periodic);
-    }
-  }
-}
-/*---------------------------------------------------------------------------*/
-uip_ds6_nbr_t *
-uip_ds6_nbr_lookup(uip_ipaddr_t *ipaddr)
-{
-  if(uip_ds6_list_loop
-     ((uip_ds6_element_t *)uip_ds6_nbr_cache, UIP_DS6_NBR_NB,
-      sizeof(uip_ds6_nbr_t), ipaddr, 128,
-      (uip_ds6_element_t **)&locnbr) == FOUND) {
-    if(stimestamp_expired(&locnbr->reachable)) {
-      PRINTF("REACHABLE: moving to STALE (");
-      PRINT6ADDR(&locnbr->ipaddr);
-      PRINTF(")\n");
-      locnbr->state = NBR_STALE;
-    }
-    return locnbr;
-  }
-  return NULL;
-}
-
-/*---------------------------------------------------------------------------*/
-uip_ds6_nbr_t *
-uip_ds6_nbr_ll_lookup(uip_lladdr_t *lladdr)
-{
-  uip_ds6_nbr_t *fin;
-
-  for( locnbr=uip_ds6_nbr_cache, fin=locnbr + UIP_DS6_NBR_NB;
-       locnbr<fin;
-       ++locnbr) {
-    if(locnbr->isused) {
-      if(!memcmp(lladdr,&locnbr->lladdr,UIP_LLADDR_LEN)) {
-        if(stimestamp_expired(&locnbr->reachable)) {
-          PRINTF("REACHABLE: moving to STALE (");
-          PRINT6ADDR(&locnbr->ipaddr);
-          PRINTF(")\n");
-          locnbr->state = NBR_STALE;
-        }
-        return locnbr;
-      }
-    }
-  }
-  return NULL;
-}
-
-/*---------------------------------------------------------------------------*/
-uip_ds6_defrt_t *
-uip_ds6_defrt_add(uip_ipaddr_t *ipaddr, unsigned long interval)
-{
-  loc_loop_state = uip_ds6_list_loop
-     ((uip_ds6_element_t *)uip_ds6_defrt_list, UIP_DS6_DEFRT_NB,
-      sizeof(uip_ds6_defrt_t), ipaddr, 128,
-      (uip_ds6_element_t **)&locdefrt);
-
-  if( loc_loop_state == NOSPACE ) {
-    loc_loop_state = uip_ds6_list_clean
-     ((uip_ds6_timed_element_t *)uip_ds6_defrt_list, UIP_DS6_DEFRT_NB,
-      sizeof(uip_ds6_addr_t), UIP_DS6_DEFRT,
-      (uip_ds6_timed_element_t **)&locaddr);
-  }
-
-  if( loc_loop_state == FREESPACE) {
-    locdefrt->isused = 1;
-    uip_ipaddr_copy(&locdefrt->ipaddr, ipaddr);
-    if(interval != 0) {
-      stimestamp_set(&locdefrt->lifetime, interval);
-      locdefrt->isinfinite = 0;
-    } else {
-      locdefrt->isinfinite = 1;
-    }
-
-    PRINTF("Adding defrouter with ip addr ");
-    PRINT6ADDR(&locdefrt->ipaddr);
-    PRINTF("\n");
-
-    ANNOTATE("#L %u 1\n", ipaddr->u8[sizeof(uip_ipaddr_t) - 1]);
-
-    return locdefrt;
-  }
-  return NULL;
-}
-
-/*---------------------------------------------------------------------------*/
-void
-uip_ds6_defrt_rm(uip_ds6_defrt_t *defrt)
-{
-  if(defrt != NULL) {
-    defrt->isused = 0;
-    ANNOTATE("#L %u 0\n", defrt->ipaddr.u8[sizeof(uip_ipaddr_t) - 1]);
-  }
-  return;
-}
-
-/*---------------------------------------------------------------------------*/
-uip_ds6_defrt_t *
-uip_ds6_defrt_lookup(uip_ipaddr_t *ipaddr)
-{
-  if(uip_ds6_list_loop((uip_ds6_element_t *)uip_ds6_defrt_list,
-		       UIP_DS6_DEFRT_NB, sizeof(uip_ds6_defrt_t), ipaddr, 128,
-		       (uip_ds6_element_t **)&locdefrt) == FOUND) {
-    if((locdefrt->isused) && (!locdefrt->isinfinite) &&
-       (stimestamp_expired(&(locdefrt->lifetime)))) {
-      uip_ds6_defrt_rm(locdefrt);
-      return NULL;
-    } else {
-      return locdefrt;
-    }
-  }
-  return NULL;
-}
-
-/*---------------------------------------------------------------------------*/
-uip_ipaddr_t *
-uip_ds6_defrt_choose(void)
-{
-  uip_ds6_nbr_t *bestnbr;
-
-  locipaddr = NULL;
-  for(locdefrt = uip_ds6_defrt_list;
-      locdefrt < uip_ds6_defrt_list + UIP_DS6_DEFRT_NB; locdefrt++) {
-    if(locdefrt->isused) {
-      if((!locdefrt->isinfinite) &&
-          (stimestamp_expired(&(locdefrt->lifetime)))) {
-        uip_ds6_defrt_rm(locdefrt);
-      } else {
-        PRINTF("Defrt, IP address ");
-        PRINT6ADDR(&locdefrt->ipaddr);
-        PRINTF("\n");
-        bestnbr = uip_ds6_nbr_lookup(&locdefrt->ipaddr);
-        if(bestnbr != NULL && bestnbr->state != NBR_INCOMPLETE) {
-          PRINTF("Defrt found, IP address ");
-          PRINT6ADDR(&locdefrt->ipaddr);
-          PRINTF("\n");
-          return &locdefrt->ipaddr;
-        } else {
-          locipaddr = &locdefrt->ipaddr;
-          PRINTF("Defrt INCOMPLETE found, IP address ");
-          PRINT6ADDR(&locdefrt->ipaddr);
-          PRINTF("\n");
-        }
-      }
-    }
-  }
-  return locipaddr;
-}
-
 /*---------------------------------------------------------------------------*/
 uip_ds6_prefix_t *
 uip_ds6_prefix_add(uip_ipaddr_t *ipaddr, uint8_t ipaddrlen,
@@ -984,70 +605,6 @@ get_match_length(uip_ipaddr_t *src, uip_ipaddr_t *dst)
     }
   }
   return len;
-}
-
-/*---------------------------------------------------------------------------*/
-#if UIP_ND6_SEND_RA
-void
-uip_ds6_send_ra_sollicited(void)
-{
-  /* We have a pb here: RA timer max possible value is 1800s,
-   * hence we have to use stimers. However, when receiving a RS, we
-   * should delay the reply by a random value between 0 and 500ms timers.
-   * stimers are in seconds, hence we cannot do this. Therefore we just send
-   * the RA (setting the timer to 0 below). We keep the code logic for
-   * the days contiki will support appropriate timers */
-  rand_time = 0;
-  PRINTF("Solicited RA, random time %u\n", rand_time);
-
-  if(stimer_remaining(&uip_ds6_timer_ra) > rand_time) {
-    if(stimer_elapsed(&uip_ds6_timer_ra) < UIP_ND6_MIN_DELAY_BETWEEN_RAS) {
-      /* Ensure that the RAs are rate limited */
-/*      stimer_set(&uip_ds6_timer_ra, rand_time +
-                 UIP_ND6_MIN_DELAY_BETWEEN_RAS -
-                 stimer_elapsed(&uip_ds6_timer_ra));
-  */ } else {
-      stimer_set(&uip_ds6_timer_ra, rand_time);
-    }
-  }
-}
-
-/*---------------------------------------------------------------------------*/
-void
-uip_ds6_send_ra_periodic(void)
-{
-  if(racount > 0) {
-    /* send previously scheduled RA */
-    uip_nd6_ra_output(NULL);
-    PRINTF("Sending periodic RA\n");
-  }
-
-  rand_time = UIP_ND6_MIN_RA_INTERVAL + random_rand() %
-    (uint16_t) (UIP_ND6_MAX_RA_INTERVAL - UIP_ND6_MIN_RA_INTERVAL);
-  PRINTF("Random time 1 = %u\n", rand_time);
-
-  if(racount < UIP_ND6_MAX_INITIAL_RAS) {
-    if(rand_time > UIP_ND6_MAX_INITIAL_RA_INTERVAL) {
-      rand_time = UIP_ND6_MAX_INITIAL_RA_INTERVAL;
-      PRINTF("Random time 2 = %u\n", rand_time);
-    }
-    racount++;
-  }
-  PRINTF("Random time 3 = %u\n", rand_time);
-  stimer_set(&uip_ds6_timer_ra, rand_time);
-}
-
-#endif /* UIP_ND6_SEND_RA */
-/*---------------------------------------------------------------------------*/
-uint32_t
-uip_ds6_compute_reachable_time(void)
-{
-  return (uint32_t) (UIP_ND6_MIN_RANDOM_FACTOR
-                     (uip_ds6_if.base_reachable_time)) +
-    ((uint16_t) (random_rand() << 8) +
-     (uint16_t) random_rand()) %
-    (uint32_t) (UIP_ND6_MAX_RANDOM_FACTOR(uip_ds6_if.base_reachable_time) -
-                UIP_ND6_MIN_RANDOM_FACTOR(uip_ds6_if.base_reachable_time));
 }
 
 

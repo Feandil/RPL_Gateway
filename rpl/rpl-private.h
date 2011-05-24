@@ -252,7 +252,6 @@ rpl_instance_t *default_instance;
 /* ICMPv6 functions for RPL. */
 void dis_output(uip_ipaddr_t *addr);
 void dio_output(rpl_instance_t *, uip_ipaddr_t *uc_addr);
-void dao_output(rpl_parent_t *, uint32_t lifetime);
 void dao_ack_output(rpl_instance_t *, uip_ipaddr_t *, uint8_t);
 void uip_rpl_input(void);
 
@@ -266,25 +265,12 @@ void rpl_join_dag(uip_ipaddr_t *from, rpl_dio_t *dio);
 void rpl_join_instance(uip_ipaddr_t *from, rpl_dio_t *dio);
 void rpl_local_repair(rpl_instance_t *instance);
 void rpl_process_dio(uip_ipaddr_t *, rpl_dio_t *);
-int rpl_process_parent_event(rpl_instance_t *, rpl_parent_t *);
 
 /* DAG object management. */
 rpl_dag_t *rpl_alloc_dodag(uint8_t, uip_ipaddr_t *);
 rpl_instance_t *rpl_alloc_instance(uint8_t);
 void rpl_free_dodag(rpl_dag_t *);
 void rpl_free_instance(rpl_instance_t *);
-
-/* DAG parent management function. */
-rpl_parent_t *rpl_add_parent(rpl_dag_t *, rpl_dio_t *dio, uip_ipaddr_t *);
-rpl_parent_t *rpl_find_parent(rpl_dag_t *, uip_ipaddr_t *);
-rpl_parent_t * rpl_find_parent_any_dag(rpl_instance_t *instance, uip_ipaddr_t *addr);
-rpl_dag_t * rpl_find_parent_dag(rpl_instance_t *instance, uip_ipaddr_t *addr);
-void rpl_nullify_parent(rpl_dag_t *, rpl_parent_t *);
-void rpl_remove_parent(rpl_dag_t *, rpl_parent_t *);
-void rpl_move_parent(rpl_dag_t *dag_src, rpl_dag_t *dag_dst, rpl_parent_t *parent);
-rpl_parent_t *rpl_select_parent(rpl_dag_t *dag);
-rpl_dag_t *rpl_select_dodag(rpl_instance_t *instance,rpl_parent_t *parent);
-int rpl_recalculate_ranks(void);
 
 /* RPL routing table functions. */
 void rpl_remove_routes(rpl_dag_t *dag);
@@ -298,11 +284,6 @@ rpl_of_t *rpl_find_of(rpl_ocp_t);
 
 /* Timer functions. */
 void rpl_reset_dio_timer(rpl_instance_t *, uint8_t);
-void rpl_update_periodic_timer(void);
-void rpl_reset_periodic_timer(void);
 ev_tstamp dio_rescheduler(struct ev_periodic *w, ev_tstamp now);
-
-/* Route poisoning. */
-void rpl_poison_routes(rpl_dag_t *, rpl_parent_t *);
 
 #endif /* RPL_PRIVATE_H */

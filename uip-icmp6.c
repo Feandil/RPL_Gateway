@@ -34,7 +34,7 @@
 #include "uip-ds6.h"
 #include "uip-icmp6.h"
 
-#define DEBUG 0
+#define DEBUG 1
 #include "uip-debug.h"
 
 #define UIP_IP_BUF                ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])

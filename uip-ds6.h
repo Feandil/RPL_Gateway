@@ -153,28 +153,6 @@
 #define UIP_DS6_DEFRT 2
 #define UIP_DS6_PREFIX 3
 
-/*--------------------------------------------------*/
-/** \brief An entry in the nbr cache */
-typedef struct uip_ds6_nbr {
-  uint8_t isused;
-  uip_ipaddr_t ipaddr;
-  uip_lladdr_t lladdr;
-  struct stimestamp reachable;
-  struct stimestamp sendns;
-  clock_time_t last_lookup;
-  uint8_t nscount;
-  uint8_t isrouter;
-  uint8_t state;
-} uip_ds6_nbr_t;
-
-/** \brief An entry in the default router list */
-typedef struct uip_ds6_defrt {
-  uint8_t isused;
-  uip_ipaddr_t ipaddr;
-  struct stimestamp lifetime;
-  uint8_t isinfinite;
-} uip_ds6_defrt_t;
-
 /** \brief A prefix list entry */
 typedef struct uip_ds6_prefix {
   uint8_t isused;
@@ -246,9 +224,6 @@ typedef struct uip_ds6_route {
 typedef struct uip_ds6_netif {
   uint32_t link_mtu;
   uint8_t cur_hop_limit;
-  uint32_t base_reachable_time; /* in msec */
-  uint32_t reachable_time;      /* in msec */
-  uint32_t retrans_timer;       /* in msec */
   uint8_t maxdadns;
   uip_ds6_addr_t addr_list[UIP_DS6_ADDR_NB];
   uip_ds6_aaddr_t aaddr_list[UIP_DS6_AADDR_NB];
@@ -288,25 +263,6 @@ uint8_t uip_ds6_list_loop(uip_ds6_element_t *list, uint8_t size,
                           uint8_t ipaddrlen,
                           uip_ds6_element_t **out_element);
 
-/** \name Neighbor Cache basic routines */
-/** @{ */
-uip_ds6_nbr_t *uip_ds6_nbr_add(uip_ipaddr_t *ipaddr, uip_lladdr_t *lladdr,
-                               uint8_t isrouter, uint8_t state);
-void uip_ds6_nbr_rm(uip_ds6_nbr_t *nbr);
-uip_ds6_nbr_t *uip_ds6_nbr_lookup(uip_ipaddr_t *ipaddr);
-uip_ds6_nbr_t *uip_ds6_nbr_ll_lookup(uip_lladdr_t *lladdr);
-void uip_ds6_nbr_nud(uip_ds6_nbr_t *nbr);
-
-
-/** @} */
-
-/** \name Default router list basic routines */
-/** @{ */
-uip_ds6_defrt_t *uip_ds6_defrt_add(uip_ipaddr_t *ipaddr,
-                                   unsigned long interval);
-void uip_ds6_defrt_rm(uip_ds6_defrt_t *defrt);
-uip_ds6_defrt_t *uip_ds6_defrt_lookup(uip_ipaddr_t *ipaddr);
-uip_ipaddr_t *uip_ds6_defrt_choose(void);
 
 /** @} */
 

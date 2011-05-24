@@ -31,7 +31,7 @@
 
 #include "rpl/rpl-private.h"
 
-#define DEBUG DEBUG_NONE
+#define DEBUG 1
 #include "uip-debug.h"
 
 static void reset(rpl_dag_t *);
