@@ -60,6 +60,11 @@ ifconf(char *tundev, const char *ipaddr)
 
   sprintf(cmd,"ifconfig %s add %s", tundev, ipaddr);
   ret = system(cmd);
+  if( ret < 0 ) {
+    return ret;
+  }
+  sprintf(cmd,"ip -6 route add %s/64 dev %s", ipaddr, tundev);
+  ret = system(cmd);
   return ret;
 }
 

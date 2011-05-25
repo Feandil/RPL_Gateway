@@ -578,7 +578,6 @@ void
 uip_ds6_set_addr_iid(uip_ipaddr_t *ipaddr, uip_lladdr_t * lladdr)
 {
   memcpy(ipaddr->u8 + 8, lladdr, UIP_LLADDR_LEN);
-  ipaddr->u8[8] ^= 0x02;
 }
 
 /*---------------------------------------------------------------------------*/

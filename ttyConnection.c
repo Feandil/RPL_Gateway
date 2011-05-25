@@ -43,15 +43,15 @@ static void handle_input(slip_io_t *slip_io)
           break;
       }
       break;
-    case '@':
+    case '`':
       if(slip_io->first_end) {
         slip_io->first_end=0;
       }
       if (slip_io->buffer_end>slip_io->buffer_start) {
-        memcpy(uip_buf,&slip_io->buffer[slip_io->buffer_start+1],slip_io->buffer_end-slip_io->buffer_start-1);
-        uip_len = slip_io->buffer_end-slip_io->buffer_start-1;
-        tcpip_input();
         printf("PACKET SEEN\n");
+        memcpy(uip_buf,&slip_io->buffer[slip_io->buffer_start],slip_io->buffer_end-slip_io->buffer_start);
+        uip_len = slip_io->buffer_end-slip_io->buffer_start;
+        tcpip_input();
       } else {
         printf("VOID PACKET SEEN\n");
       }
@@ -59,8 +59,11 @@ static void handle_input(slip_io_t *slip_io)
     default:
       for (j=slip_io->buffer_start;j<slip_io->buffer_end;++j) {
         printf("%c",slip_io->buffer[j]);
+        if(j == slip_io->buffer_end - 1
+            && slip_io->buffer[j] != '\n') {
+          printf("\n");
+        }
       }
-      printf("\n");
       break;
   }
   slip_io->buffer_end=0;
@@ -72,7 +75,7 @@ void
 tty_readable_cb (struct ev_loop *loop, struct ev_io *w, int revents)
 {
   slip_io_t *slip_io;
-  int i;
+  int i,j;
 
   slip_io = (slip_io_t *)w;
   if (revents & EV_ERROR) {
@@ -84,10 +87,12 @@ tty_readable_cb (struct ev_loop *loop, struct ev_io *w, int revents)
     slip_io->read=read(w->fd,&slip_io->temp,TTY_TEMP_BUFF_SIZE);
     for(i=0;i<slip_io->read;++i) {
       if(slip_io->buffer_end >= TTY_BUFF_SIZE) {
-        printf("Buffer overflow\n");
-        slip_io->state=STATE_RUBBISH;
+        for (j=slip_io->buffer_start;j<slip_io->buffer_end;++j) {
+          printf("%c",slip_io->buffer[j]);
+        }
         slip_io->buffer_start=0;
         slip_io->buffer_end=0;
+        slip_io->state=STATE_COMMENT;
       }
       switch(slip_io->state) {
         case STATE_RUBBISH:
@@ -120,6 +125,16 @@ tty_readable_cb (struct ev_loop *loop, struct ev_io *w, int revents)
               break;
             default:
               slip_io->buffer[slip_io->buffer_end++]=slip_io->temp[i];
+              break;
+          }
+          break;
+        case STATE_COMMENT:
+          switch(slip_io->temp[i]) {
+            case SLIP_END:
+              slip_io->state=STATE_OK;
+              break;
+            default:
+              printf("%c",slip_io->temp[i]);
               break;
           }
           break;

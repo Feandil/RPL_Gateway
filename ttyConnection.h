@@ -17,6 +17,7 @@ enum {
   STATE_OK = 1,
   STATE_ESC = 2,
   STATE_RUBBISH = 3,
+  STATE_COMMENT = 4,
 };
 
 typedef struct slip_io_t {

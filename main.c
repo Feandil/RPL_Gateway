@@ -25,6 +25,8 @@ main (int argc, char *argv[]) {
   prefix.u8[4]=0x00;
   prefix.u8[5]=0x00;
   prefix.u8[6]=0x00;
+  prefix.u8[7]=0x00;
+
 
   event_init();
 

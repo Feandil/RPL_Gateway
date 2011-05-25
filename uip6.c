@@ -89,7 +89,7 @@ void uip_rpl_input(void);
 void rpl_update_header_empty(void);
 int rpl_verify_header(int uip_ext_opt_offset);
 
-uip_lladdr_t uip_lladdr = {{0x00,0x00,0x00,0x00,0x00,0x42}};
+uip_lladdr_t uip_lladdr = {{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x42}};
 /** @} */
 
 /*---------------------------------------------------------------------------*/
@@ -311,6 +311,7 @@ uip_process()
 {
   /* Check validity of the IP header. */
   if((UIP_IP_BUF->vtc & 0xf0) != 0x60)  { /* IP version and header length. */
+    PRINTF("Wrong IP Version\n");
     goto drop;
   }
   /*
@@ -336,6 +337,7 @@ uip_process()
      * header (40 bytes).
      */
   } else {
+    PRINTF("Wrong Length\n");
     goto drop;
   }
   
