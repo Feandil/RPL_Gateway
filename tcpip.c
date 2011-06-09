@@ -42,6 +42,7 @@
 #include "tcpip.h"
 
 #include "uip-ds6.h"
+#include "uip-icmp6.h"
 #include "ttyConnection.h"
 #include "tun.h"
 
@@ -54,6 +55,7 @@
 void rpl_init(void);
 int rpl_add_header_root(void);
 void rpl_remove_header(void);
+int rpl_matching_used_prefix(uip_ipaddr_t *prefix);
 
 uint8_t routage_type;
 
@@ -114,9 +116,26 @@ tcpip_ipv6_output(void)
       uip_ds6_route_t* locrt;
       locrt = uip_ds6_route_lookup(&UIP_IP_BUF->destipaddr);
       if(locrt == NULL) {
+        if (rpl_matching_used_prefix(&UIP_IP_BUF->destipaddr)) {
+          PRINTF("ROUTAGE : Ce noeud devrait être local mais n'existe pas\n");
+          uip_icmp6_error_output(ICMP6_DST_UNREACH,ICMP6_DST_UNREACH_ADDR,0);
+          tcpip_ipv6_output();
+          return;
+        }
         routage_type = ROUTAGE_WAN;
       } else {
-	routage_type = ROUTAGE_LAN;
+        switch(locrt->state.learned_from) {
+          case RPL_ROUTE_FROM_INTERNAL:
+            routage_type = ROUTAGE_WAN;
+            break;
+          case RPL_ROUTE_FROM_ANOTHER_ROOT:
+            //TODO
+            return;
+            break;
+          default:
+            routage_type = ROUTAGE_LAN;
+            break;
+        }
       }
     }
     switch(routage_type) {

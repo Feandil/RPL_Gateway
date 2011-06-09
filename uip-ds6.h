@@ -201,6 +201,13 @@ int rpl_route_clean(rpl_route_entry_t *state);
 #ifndef UIP_DS6_ROUTE_STATE_TYPE
 #define UIP_DS6_ROUTE_STATE_TYPE rpl_route_entry_t
 #define UIP_DS6_ROUTE_STATE_CLEAN rpl_route_clean
+
+/* Values that tell where a route came from. */
+#define RPL_ROUTE_FROM_INTERNAL         0
+#define RPL_ROUTE_FROM_UNICAST_DAO      1
+#define RPL_ROUTE_FROM_MULTICAST_DAO    2
+#define RPL_ROUTE_FROM_DIO              3
+#define RPL_ROUTE_FROM_ANOTHER_ROOT     4
 #endif /* UIP_DS6_ROUTE_STATE_TYPE */
 
 /* only define the callback if RPL is active */

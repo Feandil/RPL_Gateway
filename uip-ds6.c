@@ -452,10 +452,18 @@ uip_ds6_route_lookup(uip_ipaddr_t *destipaddr)
 
   if(locrt != NULL) {
 #ifdef UIP_DS6_ROUTE_STATE_CLEAN
-    if(UIP_DS6_ROUTE_STATE_CLEAN(&locrt->state)) {
-      uip_ds6_route_rm(locrt);
-      PRINTF("DS6: Route timeout\n");
-      return NULL;
+    switch (locrt->state.learned_from) {
+      case RPL_ROUTE_FROM_UNICAST_DAO:
+      case RPL_ROUTE_FROM_MULTICAST_DAO:
+      case RPL_ROUTE_FROM_DIO:
+        if(UIP_DS6_ROUTE_STATE_CLEAN(&locrt->state)) {
+          uip_ds6_route_rm(locrt);
+          PRINTF("DS6: Route timeout\n");
+          return NULL;
+        }
+        break;
+      default:
+        break;
     }
 #endif /* UIP_DS6_ROUTE_STATE_TYPE */
     PRINTF("DS6: Found route:");
@@ -548,6 +556,9 @@ uip_ds6_select_src(uip_ipaddr_t *src, uip_ipaddr_t *dst)
     for(locaddr = uip_ds6_if.addr_list;
         locaddr < uip_ds6_if.addr_list + UIP_DS6_ADDR_NB; locaddr++) {
       /* Only preferred global (not link-local) addresses */
+PRINTF("PReff %i ",locaddr->isused && locaddr->state);
+PRINT6ADDR(&locaddr->ipaddr);
+PRINTF("\n");
       if(locaddr->isused && locaddr->state == ADDR_PREFERRED &&
          !uip_is_addr_link_local(&locaddr->ipaddr)) {
         if((!locaddr->isinfinite) && (stimestamp_expired(&locaddr->vlifetime))) {

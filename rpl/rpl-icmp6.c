@@ -305,6 +305,12 @@ dao_input(void)
       lifetime = buffer[i + 5];
       /* parent address also ignored */
       break;
+     case RPL_DIO_SUBOPT_OTHER_DODAG:
+       PRINTF("OTHER DODAG\n");
+       PRINTF("OTHER DODAG\n");
+       PRINTF("OTHER DODAG\n");
+       PRINTF("OTHER DODAG\n");
+       PRINTF("OTHER DODAG\n");
     }
   }
 

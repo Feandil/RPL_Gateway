@@ -133,17 +133,21 @@ void
 uip_icmp6_error_output(u8_t type, u8_t code, u32_t param) {
 
  /* check if originating packet is not an ICMP error*/
-if (uip_ext_len) {
-  if(UIP_EXT_BUF->next == UIP_PROTO_ICMP6 && UIP_ICMP_BUF->type < 128){
-    uip_len = 0;
-    return;
+  if (uip_ext_len) {
+    if(UIP_EXT_BUF->next == UIP_PROTO_ICMP6 && UIP_ICMP_BUF->type < 128){
+      uip_len = 0;
+      PRINTF("ICMP6: Not sending an error : Was already an error\n");
+      return;
+    }
+  } else {
+    if(UIP_IP_BUF->proto == UIP_PROTO_ICMP6 && UIP_ICMP_BUF->type < 128){
+      uip_len = 0;
+      PRINTF("ICMP6: Not sending an error : Was already an error\n");
+      return;
+    }
   }
-} else {
-  if(UIP_IP_BUF->proto == UIP_PROTO_ICMP6 && UIP_ICMP_BUF->type < 128){
-    uip_len = 0;
-    return;
-  }
-}
+
+  PRINTF("ICMP6: sending an error\n");
 
   uip_ext_len = rpl_invert_header();
 

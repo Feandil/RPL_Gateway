@@ -320,6 +320,7 @@ struct rpl_instance {
 void rpl_init(void);
 rpl_dag_t *rpl_set_root(uint8_t instance_id, uip_ipaddr_t * dag_id);
 int rpl_set_prefix(rpl_dag_t *dag, uip_ipaddr_t *prefix, int len);
+int rpl_matching_used_prefix(uip_ipaddr_t *prefix);
 int rpl_repair_root(uint8_t instance_id);
 rpl_dag_t *rpl_get_any_dag(void);
 rpl_dag_t *rpl_get_dodag(uint8_t instance_id,uip_ipaddr_t * dag_id);

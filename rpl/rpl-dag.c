@@ -177,13 +177,46 @@ rpl_repair_root(uint8_t instance_id)
 int
 rpl_set_prefix(rpl_dag_t *dag, uip_ipaddr_t *prefix, int len)
 {
+  uip_ipaddr_t ipaddr;
+
   if(len <= 128) {
     memset(&dag->prefix_info.prefix, 0, 16);
     memcpy(&dag->prefix_info.prefix, prefix, (len + 7) / 8);
     dag->prefix_info.length = len;
     dag->prefix_info.flags = 0x40;
     PRINTF("RPL: Prefix set - will announce this in DIOs\n");
+
+    /* Autoconfigure an address if this node does not already have an address
+       with this prefix. */
+    /* assume that the prefix ends with zeros! */
+    memcpy(&ipaddr, &dag->prefix_info.prefix, 16);
+    uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
+    if(uip_ds6_addr_lookup(&ipaddr) == NULL) {
+      PRINTF("RPL: adding global IP address ");
+      PRINT6ADDR(&ipaddr);
+      PRINTF("\n");
+      uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);
+    }
     return 1;
+  }
+  return 0;
+}
+/************************************************************************/
+int
+rpl_matching_used_prefix(uip_ipaddr_t *prefix)
+{
+  int i;
+  rpl_instance_t *instance, *end;
+
+  for(instance = &instance_table[0], end = instance + RPL_MAX_INSTANCES; instance < end; ++instance) {
+    if(instance->used) {
+      for(i = 0; i < RPL_MAX_DODAG_PER_INSTANCE; ++i) {
+        if((instance->dag_table[i].used)
+            && (uip_ipaddr_prefixcmp(&instance->dag_table[i].prefix_info.prefix, prefix, instance->dag_table[i].prefix_info.length))) {
+          return 1;
+        }
+      }
+    }
   }
   return 0;
 }

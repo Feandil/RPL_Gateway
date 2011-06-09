@@ -163,12 +163,6 @@
 #define RPL_INSTANCE_LOCAL_FLAG         0x80
 #define RPL_INSTANCE_D_FLAG             0x40
 
-/* Values that tell where a route came from. */
-#define RPL_ROUTE_FROM_INTERNAL         0
-#define RPL_ROUTE_FROM_UNICAST_DAO      1
-#define RPL_ROUTE_FROM_MULTICAST_DAO    2
-#define RPL_ROUTE_FROM_DIO              3
-
 /* DAG Mode of Operation */
 #define RPL_MOP_NO_DOWNWARD_ROUTES      0
 #define RPL_MOP_NON_STORING             1

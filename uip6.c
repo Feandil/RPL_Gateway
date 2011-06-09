@@ -86,7 +86,6 @@
 #include "uip-debug.h"
 
 void uip_rpl_input(void);
-void rpl_update_header_empty(void);
 int rpl_verify_header(int uip_ext_opt_offset);
 
 uip_lladdr_t uip_lladdr = {{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x42}};

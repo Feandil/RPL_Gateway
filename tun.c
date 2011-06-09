@@ -11,8 +11,37 @@
 #include <unistd.h>
 
 #include "sys/perms.h"
+#include "sys/event.h"
+#include "uip6.h"
+#include "tcpip.h"
 
-int tun_fd;
+struct tun_io_t *tun_io;
+
+void
+tun_readable_cb (struct ev_loop *loop, struct ev_io *w, int revents)
+{
+  tun_io_t *tun_io;
+
+  if (revents & EV_ERROR) {
+    ev_io_stop (loop, w);
+    return;
+  }
+
+  tun_io = (tun_io_t *)w;
+  if(revents & EV_READ) {
+    tun_io->read=read(w->fd,&tun_io->buffer,TUN_BUFF_SIZE);
+    if (tun_io->read > 0) {
+      if (tun_io->read > 1280) {
+        printf("TUN : Too large paquet");
+      } else{
+        memcpy(uip_buf,tun_io->buffer,tun_io->read);
+        uip_len = tun_io->read;
+        tcpip_input();
+      }
+    }
+  }
+  tun_io->read=0;
+}
 
 int
 tun_alloc(char *dev)
@@ -20,9 +49,13 @@ tun_alloc(char *dev)
   struct ifreq ifr;
   int err;
 
-  tun_fd = open("/dev/net/tun", O_RDWR);
+  if ((tun_io=(tun_io_t *)malloc(sizeof(struct tun_io_t)))==NULL)
+    return -1;
+  memset(tun_io,0,sizeof(struct tun_io_t));
 
-  if( tun_fd < 0 ) {
+  tun_io->fd = open("/dev/net/tun", O_RDWR);
+
+  if( tun_io->fd < 0 ) {
     return -1;
   }
 
@@ -37,12 +70,15 @@ tun_alloc(char *dev)
   if(*dev != 0)
     strncpy(ifr.ifr_name, dev, IFNAMSIZ);
 
-  err = ioctl(tun_fd, TUNSETIFF, (void *) &ifr);
+  err = ioctl(tun_io->fd, TUNSETIFF, (void *) &ifr);
   if( err < 0 ) {
-    close(tun_fd);
+    close(tun_io->fd);
     return err;
   }
   strcpy(dev, ifr.ifr_name);
+
+  ev_io_init (&tun_io->tun_ev, tun_readable_cb, tun_io->fd, EV_READ);
+  ev_io_start(event_loop,&tun_io->tun_ev);
   return 0;
 }
 
@@ -91,7 +127,7 @@ tun_create(char *tundev, const char *ipaddr)
 void
 tun_output(uint8_t *ptr, int size) {
   int res;
-  res=write(tun_fd,ptr,size);
+  res=write(tun_io->fd,ptr,size);
   printf("tunout %i: %i",size,res);
 }
 
