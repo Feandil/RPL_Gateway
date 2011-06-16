@@ -194,6 +194,8 @@ typedef struct rpl_route_entry {
   struct stimestamp lifetime;
   void *dag;
   uint8_t learned_from;
+  struct stimestamp hoag_lifetime;
+  uint8_t pushed;
 } rpl_route_entry_t;
 
 int rpl_route_clean(rpl_route_entry_t *state);
@@ -259,9 +261,6 @@ extern uip_ds6_prefix_t uip_ds6_prefix_list[UIP_DS6_PREFIX_NB];
 /*---------------------------------------------------------------------------*/
 /** \brief Initialize data structures */
 void uip_ds6_init(void);
-
-/** \brief Periodic processing of data structures */
-void uip_ds6_periodic(struct ev_loop *loop, struct ev_timer *w, int revents);
 
 /** \brief Generic loop routine on an abstract data structure, which generalizes
  * all data structures used in DS6 */

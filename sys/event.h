@@ -5,7 +5,8 @@
 
 struct ev_loop *event_loop;
 
-void event_init(void);
+int event_init(void);
 void event_launch(void);
+void event_stop(void);
 #endif /* MAIN_H */
 

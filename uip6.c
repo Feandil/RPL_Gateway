@@ -308,6 +308,8 @@ ext_hdr_options_process() {
 void
 uip_process()
 {
+  PRINTF("NEW packet\n");
+
   /* Check validity of the IP header. */
   if((UIP_IP_BUF->vtc & 0xf0) != 0x60)  { /* IP version and header length. */
     PRINTF("Wrong IP Version\n");

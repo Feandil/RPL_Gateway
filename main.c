@@ -1,19 +1,37 @@
-#include "tun.h"
+#include <netinet/in.h>
+
+#include "main.h"
 
 #include <stdio.h>
 #include <string.h>
+#include <signal.h>
 
 #include "sys/perms.h"
 #include "ttyConnection.h"
 #include "sys/event.h"
 #include "uip6.h"
 #include "rpl/rpl.h"
+#include "mob-action.h"
+#include "udp.h"
+
+void
+down(int sig) {
+  printf("\ndie\n");
+  event_stop();
+  udp_close();
+  clear_tunnel();
+}
+
+
 
 int
 main (int argc, char *argv[]) {
 
+  int port = 23423;
   char id[] = "tun0";
+  char tun[] = "tunlbr";
   char ip[] = "fc00::1";
+  char publicip[] = "2001:660:5301:18:223:dfff:fe8d:4efc";
   uip_ipaddr_t ipaddr;
   uip_ip6addr_t prefix;
   rpl_dag_t *dag;
@@ -28,11 +46,13 @@ main (int argc, char *argv[]) {
   prefix.u8[6]=0x00;
   prefix.u8[7]=0x00;
 
+  signal(SIGINT, down);
 
   event_init();
 
   uip_ds6_init();
   rpl_init();
+  mob_init();
 
   memset(&ipaddr,0,16);
   memcpy(&ipaddr,&prefix,8);
@@ -45,6 +65,8 @@ main (int argc, char *argv[]) {
   }
   rep->state.dag = NULL;
   rep->state.learned_from = RPL_ROUTE_FROM_INTERNAL;
+  rep->state.pushed = 1;
+
 
   uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
   dag = rpl_set_root(0,&ipaddr);
@@ -52,7 +74,7 @@ main (int argc, char *argv[]) {
     rpl_set_prefix(dag, &prefix, 64);
   }
 
-  dag->preference=0xff;
+//  dag->preference=0xff;
 
   perm_print();
   tun_create(id,ip);
@@ -61,7 +83,11 @@ main (int argc, char *argv[]) {
 
   init_ttyUSBX(0);
 
+  udp_init(port,&(tun[0]),&(id[0]),&(publicip[0]));
+
+
   event_launch();
+
 
   return 0;
 }

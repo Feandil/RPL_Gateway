@@ -32,7 +32,7 @@ tun_readable_cb (struct ev_loop *loop, struct ev_io *w, int revents)
     tun_io->read=read(w->fd,&tun_io->buffer,TUN_BUFF_SIZE);
     if (tun_io->read > 0) {
       if (tun_io->read > 1280) {
-        printf("TUN : Too large paquet");
+        printf("TUN : Too large paquet\n");
       } else{
         memcpy(uip_buf,tun_io->buffer,tun_io->read);
         uip_len = tun_io->read;
@@ -128,6 +128,6 @@ void
 tun_output(uint8_t *ptr, int size) {
   int res;
   res=write(tun_io->fd,ptr,size);
-  printf("tunout %i: %i",size,res);
+  printf("tunout %i: %i\n",size,res);
 }
 

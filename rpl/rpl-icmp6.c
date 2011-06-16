@@ -42,6 +42,7 @@
 #define DEBUG 1
 
 #include "uip-debug.h"
+#include "mob-action.h"
 
 /*---------------------------------------------------------------------------*/
 #define RPL_DIO_GROUNDED                 0x80
@@ -239,6 +240,7 @@ dao_input(void)
   int len;
   int i;
   int learned_from;
+  int tlv_len;
 
   lifetime = 0;
   prefixlen = 0;
@@ -306,11 +308,9 @@ dao_input(void)
       /* parent address also ignored */
       break;
      case RPL_DIO_SUBOPT_OTHER_DODAG:
-       PRINTF("OTHER DODAG\n");
-       PRINTF("OTHER DODAG\n");
-       PRINTF("OTHER DODAG\n");
-       PRINTF("OTHER DODAG\n");
-       PRINTF("OTHER DODAG\n");
+       for(tlv_len = 2; tlv_len < len; tlv_len += sizeof(dag->dag_id)) {
+         mob_new_6lbr((uip_ip6addr_t *)&buffer[i+tlv_len]);
+       }
     }
   }
 
@@ -331,6 +331,8 @@ dao_input(void)
     }
     return;
   }
+
+  mob_new_node();
 
   learned_from = uip_is_addr_mcast(&dao_sender_addr) ?
                  RPL_ROUTE_FROM_MULTICAST_DAO : RPL_ROUTE_FROM_UNICAST_DAO;
