@@ -87,7 +87,7 @@ new_dio_interval(rpl_instance_t *instance)
   instance->dio_counter = 0;
 
   /* schedule the timer */
-  PRINTF("RPL: Scheduling DIO timer %lu ticks in future (Interval)\n", instance->dio_timer.dio_next_delay);
+  PRINTF("RPL: Scheduling DIO timer %"PRIu32" ticks in future (Interval)\n", instance->dio_timer.dio_next_delay);
   ev_periodic_again(event_loop,&instance->dio_timer.periodic);
 }
 /************************************************************************/

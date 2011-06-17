@@ -74,7 +74,7 @@ typedef struct mob_opt_timestamp {
 } mob_opt_timestamp;
 
 #define MOB_TYPE  135
-#define MOB_HDR_LEN 3
+#define MOB_HDR_LEN 4
 
 #define MOB_OPT_PREFIX    22
 #define MOB_OPT_STATUS    42
@@ -84,7 +84,9 @@ typedef struct mob_opt_timestamp {
 
 #define MOB_LEN_HDR      4
 #define MOB_LEN_BIND     6
+#define MOB_LEN_ACK      6
 #define MOB_LEN_HANDOFF  4
+#define MOB_LEN_STATUS   4
 #define MOB_LEN_NIO      12
 
 #define MOB_HANDOFF_NEW_BINDING     1

@@ -20,7 +20,7 @@ typedef struct mob_ll_list {
 
 typedef struct mob_ip_list {
   uint8_t used;
-  uip_lladdr_t addr;
+  uip_ipaddr_t addr;
 } mob_ip_list;
 
 

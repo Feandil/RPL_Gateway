@@ -6,6 +6,7 @@
 #include "sys/event.h"
 #include "uip-ds6.h"
 #include "udp.h"
+#include "tunnel.h"
 
 #define MOB_BUFF_OPT                    ((mob_opt *)(buff + temp_len))
 #define MOB_BUFF_PREFIX          ((mob_opt_prefix *)(buff + temp_len))
@@ -117,8 +118,7 @@ printf("Del NIO\n");
   if(temp_len != 0) {
     hdr->len = temp_len + MOB_LEN_BIND;
 
-    printf("outgoing packet udp mobility");
-//    udp_output(&output_buffer[0],hdr->len + MOB_LEN_HDR, &hoag_addr, hoag_addr_len);
+    udp_output(&output_buffer[0],hdr->len + MOB_LEN_HDR, &hoag_addr, hoag_addr_len);
   }
 }
 
@@ -191,12 +191,12 @@ mob_incoming_ack(uint8_t *buffer, int len) {
     return;
   }
 
-  if (buff && MOB_FLAG_ACK_P) {
+  if (!buff && MOB_FLAG_ACK_P) {
     printf("UDP IN : Flag not set (P) (unimplemented)");
     return;
   }
 
-  if (buff && MOB_FLAG_ACK_O) {
+  if (!buff && MOB_FLAG_ACK_O) {
     printf("UDP IN : Flag not set (O) (unimplemented)");
     return;
   }
@@ -258,19 +258,19 @@ mob_receive_udp(uint8_t *buffer, int read, struct sockaddr_in6 *addr, socklen_t 
   ext_hdr *buff;
 
   if(read < MOB_HDR_LEN) {
-    printf("UDP IN : Packet too short : %u", read);
+    printf("UDP IN : Packet too short : %u\n", read);
     return;
   }
 
   buff=((ext_hdr*)buffer);
 
   if(buff->type != MOB_TYPE) {
-    printf("UDP IN : Not a Mobility Packet");
+    printf("UDP IN : Not a Mobility Packet\n");
     return;
   }
 
   if(buff->len != read - MOB_HDR_LEN) {
-    printf("UDP IN : Bad length (%u VS %u - %u)", buff->len, read, MOB_HDR_LEN);
+    printf("UDP IN : Bad length (%u VS %u - %u)\n", buff->len, read, MOB_HDR_LEN);
     return;
   }
 
@@ -278,19 +278,25 @@ mob_receive_udp(uint8_t *buffer, int read, struct sockaddr_in6 *addr, socklen_t 
 
   switch(buff->mess) {
     case MOB_HR_UPDATE:
-      printf("UDP IN : Bad message (Binding Update)");
+      printf("UDP IN : Bad message (Binding Update)\n");
       break;
     case MOB_HR_ACK:
       mob_incoming_ack(&buff->next,buff->len);
       break;
     case MOB_HR_NEW_G:
-      printf("UDP IN : Bad message (New Gateway)");
+      printf("UDP IN : Bad message (New Gateway)\n");
       break;
     default:
-      printf("UDP IN : Bad message (Unknown : %u)",buff->mess);
+      printf("UDP IN : Bad message (Unknown : %u)\n",buff->mess);
       break;
   }
 }
+
+void
+receive_udp(uint8_t *buffer, int read, struct sockaddr_in6 *addr, socklen_t addr_len) {
+  mob_receive_udp(buffer, read, addr, addr_len);
+}
+
 
 void
 mob_send_lbr(uip_ip6addr_t *lbr) {
@@ -301,10 +307,12 @@ mob_send_lbr(uip_ip6addr_t *lbr) {
   hdr->type = MOB_TYPE;
   hdr->mess = MOB_HR_NEW_G;
   hdr->len = sizeof(mob_new_lbr);
+  hdr->reserved = 0;
   data = (mob_new_lbr*) &hdr->next;
 
   data->reserved = 0;
   memcpy(&data->addr,lbr,sizeof(uip_ip6addr_t));
+  udp_output(&output_buffer[0],hdr->len + MOB_LEN_HDR, &hoag_addr, hoag_addr_len);
 }
 
 void
@@ -362,3 +370,9 @@ mob_lost_node(uip_ip6addr_t *lbr)
   printf("MOB : BUFFER OVERFLOW");
 }
 
+void
+udp_connected(struct sockaddr_in6 *addr, socklen_t addr_len, char* tldev, char* tdev, char *iaddr)
+{
+  tunnel_client_create(tldev,tdev,iaddr,addr,addr_len);
+  mob_connect_hoag(addr,addr_len);
+}

@@ -8,7 +8,7 @@
 
 #include "sys/perms.h"
 #include "sys/event.h"
-#include "mob-action.h"
+//#include "mob-action.h"
 #include "tunnel.h"
 
 int tunnel_created;
@@ -16,7 +16,12 @@ int tunnel_created;
 struct udp_io_t *udp_io;
 char *tdev;
 char *tldev;
-const char *iaddr;
+char *iaddr;
+
+
+void receive_udp(uint8_t *buffer, int read, struct sockaddr_in6 *addr, socklen_t addr_len);
+
+void udp_connected(struct sockaddr_in6 *addr, socklen_t addr_len, char* tldev, char* tdev, char *iaddr);
 
 void
 udp_readable_cb (struct ev_loop *loop, struct ev_io *w, int revents)
@@ -34,25 +39,24 @@ udp_readable_cb (struct ev_loop *loop, struct ev_io *w, int revents)
 
     udp_io->read = recvfrom(w->fd, &udp_io->buffer, UDP_BUFF_SIZE, 0, (struct sockaddr *) &udp_io->addr, &udp_io->addr_len);
 
-    if ((!tunnel_created) && (udp_io->addr.sin6_port !=0)) {
-      tunnel_create(tldev,tdev,iaddr,&udp_io->addr,udp_io->addr_len);
+   if ((!tunnel_created) && (udp_io->addr.sin6_port !=0)) {
+      udp_connected(&udp_io->addr,udp_io->addr_len,tldev,tdev,iaddr);
       tunnel_created = 1;
-      mob_connect_hoag(&udp_io->addr,udp_io->addr_len);
     }
-/*    if (udp_io->read > 0) {
+    if (udp_io->read > 1) {
       if (udp_io->read > 1280) {
         printf("UDP : Too large paquet\n");
       } else{
-        mob_receive_udp(&(udp_io->buffer[0]), udp_io->read, &udp_io->addr, udp_io->addr_len);
+        receive_udp(&(udp_io->buffer[0]), udp_io->read, &udp_io->addr, udp_io->addr_len);
       }
     }
-*/
+
   }
   udp_io->read=0;
 }
 
 int
-udp_init(int port, char *tuneldev, char *tundev, const char *ipaddr)
+udp_init(int port, char *tuneldev, char *tundev, char *ipaddr)
 {
   tdev=tundev;
   tldev=tuneldev;

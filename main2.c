@@ -11,7 +11,7 @@
 #include "sys/event.h"
 #include "uip6.h"
 #include "rpl/rpl.h"
-#include "mob-action.h"
+#include "hoag-action.h"
 #include "udp.h"
 #include "tunnel.h"
 #include "tun.h"
@@ -51,44 +51,10 @@ main (int argc, char *argv[]) {
 
   event_init();
 
-  uip_ds6_init();
-  rpl_init();
-  mob_init();
-
-  memset(&ipaddr,0,16);
-  memcpy(&ipaddr,&prefix,8);
-  ipaddr.u8[15]=0x01;
-
-  rep = uip_ds6_route_add(&ipaddr, 128, &ipaddr, 0);
-  if (rep == NULL) {
-    printf("Boot error");
-    return -1;
-  }
-  rep->state.dag = NULL;
-  rep->state.learned_from = RPL_ROUTE_FROM_INTERNAL;
-  rep->state.pushed = 1;
-
-
-  uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
-  dag = rpl_set_root(0,&ipaddr);
-  if(dag != NULL) {
-    rpl_set_prefix(dag, &prefix, 64);
-  }
-
-//  dag->preference=0xff;
-
-  perm_print();
-  tun_create(id,ip);
-//  perm_drop();
-  perm_print();
-
-  init_ttyUSBX(0);
-
+  hoag_init();
   udp_init(port,&(tun[0]),&(id[0]),&(publicip[0]));
 
-
   event_launch();
-
 
   return 0;
 }

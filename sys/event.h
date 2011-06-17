@@ -1,5 +1,5 @@
-#ifndef MAIN_H
-#define MAIN_H
+#ifndef EV_H
+#define EV_H
 
 #include <ev.h>
 
@@ -8,5 +8,5 @@ struct ev_loop *event_loop;
 int event_init(void);
 void event_launch(void);
 void event_stop(void);
-#endif /* MAIN_H */
+#endif /* EV_H */
 
