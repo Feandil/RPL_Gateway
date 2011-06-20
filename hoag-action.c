@@ -80,7 +80,7 @@ apply_change_nio(uip_lladdr_t *nio, uint8_t handoff, struct sockaddr_in6 *addr, 
 }
 
 void
-hoag_add_nio(uip_lladdr_t *nio, uint8_t handoff, mob_bind_up *buff, int *t_len, uint8_t *out_status, uint8_t *out_handoff, struct sockaddr_in6 *addr, socklen_t addr_len)
+hoag_add_nio(uip_lladdr_t *nio, uint8_t handoff, uint8_t *buff, int *t_len, uint8_t *out_status, uint8_t *out_handoff, struct sockaddr_in6 *addr, socklen_t addr_len)
 {
   uint8_t status;
   int temp_len = *t_len;
@@ -106,9 +106,9 @@ hoag_add_nio(uip_lladdr_t *nio, uint8_t handoff, mob_bind_up *buff, int *t_len, 
 }
 
 inline void
-hoag_proceed_up(mob_bind_up *buff, int len, struct sockaddr_in6 *addr, socklen_t addr_len)
+hoag_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen_t addr_len)
 {
-  uint8_t handoff, out_handoff, out_status;
+  uint8_t handoff, out_handoff, out_status, *buff;
   int temp_len;
   struct mob_bind_ack *outbuff;
   uip_lladdr_t *nio;
@@ -116,43 +116,43 @@ hoag_proceed_up(mob_bind_up *buff, int len, struct sockaddr_in6 *addr, socklen_t
   outbuff = (mob_bind_ack *)&output_buffer[0];
   nio = NULL;
 
-  if (!buff->flag & MOB_FLAG_UP_A) {
-    printf("UDP IN : Flag unimplemented (!A)");
+  if (!(buffer->flag & MOB_FLAG_UP_A)) {
+    printf("UDP IN : Flag unimplemented (!A)\n");
     return;
   }
 
-  if (!buff->flag & MOB_FLAG_UP_H) {
-    printf("UDP IN : Flag unimplemented (!H)");
+  if (!(buffer->flag & MOB_FLAG_UP_H)) {
+    printf("UDP IN : Flag unimplemented (!H)\n");
     return;
   }
 
-  if (!buff->flag & MOB_FLAG_UP_L) {
-    printf("UDP IN : Flag unimplemented (!L)");
+  if (!(buffer->flag & MOB_FLAG_UP_L)) {
+    printf("UDP IN : Flag unimplemented (!L)\n");
     return;
   }
 
-  if (buff->flag & MOB_FLAG_UP_K) {
-    printf("UDP IN : Flag unimplemented (K)");
+  if (buffer->flag & MOB_FLAG_UP_K) {
+    printf("UDP IN : Flag unimplemented (K)\n");
     return;
   }
 
-  if (buff->flag & MOB_FLAG_UP_M) {
-    printf("UDP IN : Flag unimplemented (M)");
+  if (buffer->flag & MOB_FLAG_UP_M) {
+    printf("UDP IN : Flag unimplemented (M)\n");
     return;
   }
 
-  if (buff->flag & MOB_FLAG_UP_R) {
-    printf("UDP IN : Flag unimplemented (R)");
+  if (buffer->flag & MOB_FLAG_UP_R) {
+    printf("UDP IN : Flag unimplemented (R)\n");
     return;
   }
 
-  if (!buff->flag & MOB_FLAG_UP_P) {
-    printf("UDP IN : Flag unimplemented (!P)");
+  if (!(buffer->flag & MOB_FLAG_UP_P)) {
+    printf("UDP IN : Flag unimplemented (!P)\n");
     return;
   }
 
-  if (!buff->flag & MOB_FLAG_UP_O) {
-    printf("UDP IN : Flag unimplemented (!O)");
+  if (!(buffer->flag & MOB_FLAG_UP_O)) {
+    printf("UDP IN : Flag unimplemented (!O)\n");
     return;
   }
 
@@ -163,9 +163,10 @@ hoag_proceed_up(mob_bind_up *buff, int len, struct sockaddr_in6 *addr, socklen_t
   outbuff->flag = 0;
   outbuff->flag |= MOB_FLAG_ACK_P;
   outbuff->flag |= MOB_FLAG_ACK_O;
-  outbuff->sequence = buff->sequence;
+  outbuff->sequence = buffer->sequence;
   outbuff->lifetime = 0;
 
+  buff = &(buffer->options);
   temp_len = 0;
   handoff = MOB_HANDOFF_NO_CHANGE;
   out_handoff = MOB_HANDOFF_NO_CHANGE;
@@ -179,7 +180,7 @@ hoag_proceed_up(mob_bind_up *buff, int len, struct sockaddr_in6 *addr, socklen_t
           nio = NULL;
         }
         handoff = MOB_HANDOFF_NO_CHANGE;
-        printf("Not Implemented");
+        printf("Not Implemented : MOB_OPT_PREFIX\n");
         break;
       case MOB_OPT_PREF:
         if(nio != NULL) {
@@ -187,7 +188,7 @@ hoag_proceed_up(mob_bind_up *buff, int len, struct sockaddr_in6 *addr, socklen_t
           nio = NULL;
         }
         handoff = MOB_BUFF_PREF->hi;
-        printf("Not Implemented");
+        printf("Not Implemented : MOB_OPT_PREF\n");
         break;
       case MOB_OPT_NIO:
         if(nio != NULL) {
@@ -196,10 +197,10 @@ hoag_proceed_up(mob_bind_up *buff, int len, struct sockaddr_in6 *addr, socklen_t
         nio = &MOB_BUFF_NIO->addr;
         break;
       case MOB_OPT_TIMESTAMP:
-        printf("Not Implemented");
+        printf("Not Implemented : MOB_OPT_TIMESTAMP\n");
         break;
       default:
-        printf("Unknown stuff");
+        printf("Unknown stuff : %u\n",(MOB_BUFF_OPT->type));
         break;
     }
     temp_len += MOB_BUFF_OPT->len+2;
@@ -235,13 +236,14 @@ hoag_new_gw(mob_new_lbr *target)
   }
 
   if(unused_elt == NULL) {
-    printf("NO PLACE FOR NEW 6LBR !!!");
+    printf("NO PLACE FOR NEW 6LBR !!!\n");
     return;
   }
 
   unused_elt->used = 1;
   unused_elt->hoag_addr.sin6_family = AF_INET6;
-  unused_elt->hoag_addr.sin6_port = port;
+
+  unused_elt->hoag_addr.sin6_port = htons(port);
   unused_elt->hoag_addr.sin6_flowinfo = 0;
 //  convert(&unused_elt->hoag_addr.sin6_addr,&target->addr);
   memcpy(&unused_elt->hoag_addr.sin6_addr, &target->addr, sizeof(struct sockaddr_in6));
@@ -257,10 +259,6 @@ hoag_new_gw(mob_new_lbr *target)
 
   unused_elt->devnum = tunnelnum++;
   tunnel_server_create(tuneldev, unused_elt->devnum, &unused_elt->hoag_addr);
-
-  sprintf(cmd,"ip -6 route add %s dev %s%u", gw, tuneldev, unused_elt->devnum);
-  printf("SH : %s\n",cmd);
-  system(cmd);
 }
 
 void
@@ -300,7 +298,7 @@ hoag_receive_udp(uint8_t *buffer, int read, struct sockaddr_in6 *addr, socklen_t
       hoag_proceed_up((mob_bind_up*)&(buff->next), buff->len, addr, addr_len);
       break;
     case MOB_HR_ACK:
-      printf("UDP IN : Bad message (Ack)");
+      printf("UDP IN : Bad message (Ack)\n");
       break;
     case MOB_HR_NEW_G:
       hoag_new_gw((mob_new_lbr*)&(buff->next));

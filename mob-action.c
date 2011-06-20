@@ -187,22 +187,22 @@ mob_incoming_ack(uint8_t *buffer, int len) {
 
   buff = (mob_bind_ack *) buffer;
 
-  if (buff & MOB_FLAG_ACK_K) {
+  if (buff->flag & MOB_FLAG_ACK_K) {
     printf("UDP IN : Flag unimplemented (K)");
     return;
   }
 
-  if (buff & MOB_FLAG_ACK_R) {
+  if (buff->flag & MOB_FLAG_ACK_R) {
     printf("UDP IN : Flag unimplemented (R)");
     return;
   }
 
-  if (!buff & MOB_FLAG_ACK_P) {
+  if (!(buff->flag & MOB_FLAG_ACK_P)) {
     printf("UDP IN : Flag not set (P) (unimplemented)");
     return;
   }
 
-  if (!buff & MOB_FLAG_ACK_O) {
+  if (!(buff->flag & MOB_FLAG_ACK_O)) {
     printf("UDP IN : Flag not set (O) (unimplemented)");
     return;
   }
@@ -381,4 +381,10 @@ udp_connected(struct sockaddr_in6 *addr, socklen_t addr_len, char* tldev, char* 
 {
   tunnel_client_create(tldev,tdev,iaddr,addr,addr_len);
   mob_connect_hoag(addr,addr_len);
+
+  output_buffer[0]='\n';
+  output_buffer[1]='\0';
+
+  udp_output(output_buffer, 1, addr);
+  udp_output(output_buffer, 1, addr);
 }

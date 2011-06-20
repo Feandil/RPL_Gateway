@@ -108,18 +108,26 @@ clear_tunnel(void) {
   if(tldev != NULL) {
     sprintf(cmd,"ip -6 tunnel del %s", tldev);
     printf("SH : %s\n",cmd);
+    system(cmd);
     sprintf(cmd,"ip rule del iif %s table %s.%s", tdev, tldev, tdev);
     printf("SH : %s\n",cmd);
+    system(cmd);
     sprintf(cmd,"ip -6 route flush table %s.%s", tldev, tdev);
     printf("SH : %s\n",cmd);
+    system(cmd);
     sprintf(cmd,"sed -i -e /42\\ %s.%s/d /etc/iproute2/rt_tables", tldev, tdev);
     printf("SH : %s\n",cmd);
+    system(cmd);
   }
 }
 
 void
 close_tunnel(char* devbase, uint8_t i) {
   char cmd[1024];
+  sprintf(cmd,"ip -6 route flush dev %s%u", devbase, i);
+  printf("SH : %s\n",cmd);
+  system(cmd);
   sprintf(cmd,"ip -6 tunnel del %s%u", devbase, i);
   printf("SH : %s\n",cmd);
+  system(cmd);
 }

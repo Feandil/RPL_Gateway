@@ -108,6 +108,9 @@ void
 udp_output(uint8_t *ptr, int size, struct sockaddr_in6 *addr)
 {
   int res;
+
+  printf("%u,%u,%u,%u", addr->sin6_family, ntohs(addr->sin6_port), addr->sin6_flowinfo, addr->sin6_scope_id);
+
   res=sendto(udp_io->fd,ptr,size,0,(struct sockaddr *)addr, sizeof(struct sockaddr_in6));
   printf("udpout %i: %i\n",size,res);
 }
