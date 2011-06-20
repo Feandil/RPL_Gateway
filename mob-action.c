@@ -97,7 +97,6 @@ printf("\n");
       temp_len += MOB_OPT_NIO;
     }
   }
-  if (data->flag && MOB_FLAG_UP_K) printf("ERGGGGG 44");
 
   for(i=0;i<MAX_DELETE_NIO;++i) {
     if(deleted[i].used) {
@@ -118,12 +117,9 @@ printf("Del NIO\n");
       temp_len += MOB_OPT_NIO;
     }
   }
-  if (data->flag && MOB_FLAG_UP_K) printf("ERGGGGG 42");
 
   if(temp_len != 0) {
     hdr->len = temp_len + MOB_LEN_BIND;
-  if (data->flag && MOB_FLAG_UP_K) printf("ERGGGGG 43");
-
     udp_output(&output_buffer[0],hdr->len + MOB_LEN_HDR, &hoag_addr);
   }
 }

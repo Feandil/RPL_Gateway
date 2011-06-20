@@ -93,12 +93,12 @@ tunnel_server_create(char *tuneldevbase, uint8_t tunneldev_int, struct sockaddr_
     return ret;
   }
 
-  sprintf(cmd,"ip -6 route add %s dev %s%u", ip, tuneldevbase, tunneldev_int);
-  printf("SH : %s\n",cmd);
-  ret = system(cmd);
-  if( ret < 0 ) {
-    return ret;
-  }
+//  sprintf(cmd,"ip -6 route add %s dev %s%u", ip, tuneldevbase, tunneldev_int);
+//  printf("SH : %s\n",cmd);
+//  ret = system(cmd);
+//  if( ret < 0 ) {
+//    return ret;
+//  }
   return 0;
 }
 

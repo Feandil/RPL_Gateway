@@ -10,6 +10,9 @@
 #include "udp.h"
 #include "tunnel.h"
 
+#define DEBUG 1
+#include "uip-debug.h"
+
 #define MOB_BUFF_OPT                    ((mob_opt *)(buff + temp_len))
 #define MOB_BUFF_PREFIX          ((mob_opt_prefix *)(buff + temp_len))
 #define MOB_BUFF_STATUS          ((mob_opt_status *)(buff + temp_len))
@@ -44,26 +47,26 @@ hoag_init(int p, uip_ipaddr_t *pre, char* devname)
 }
 
 inline int
-change_route(char *dest, char *gw, char *command)
+change_route(char *dest, int gw, char *command)
 {
-  sprintf(cmd,"ip -6 route %s %s via %s", command, dest , gw);
+  sprintf(cmd,"ip -6 route %s %s dev %s%u", command, dest , tuneldev, gw);
   printf("SH : %s\n",cmd);
   return system(cmd);
 }
 
 inline uint8_t
-apply_change_nio(uip_lladdr_t *nio, uint8_t handoff, struct sockaddr_in6 *addr, socklen_t addr_len)
+apply_change_nio(uip_lladdr_t *nio, uint8_t handoff, uint8_t gw)
 {
-  char gw[128];
   char dest[128];
+
+PRINT6ADDR(&prefix);
+printf("\n");
 
   memcpy(((uint8_t*)&prefix)+sizeof(uip_lladdr_t),nio,sizeof(uip_lladdr_t));
   toString(&prefix,dest);
 
-  if(inet_ntop(AF_INET6,(void*)(&addr->sin6_addr),gw,8*sizeof(struct in6_addr)) == NULL) {
-    printf("Impossible to understand incomming IP\n");
-    return MOB_STATUS_ERR_FLAG;
-  }
+PRINT6ADDR(&prefix);
+printf("\n");
 
   switch(handoff) {
     case MOB_HANDOFF_UNKNOWN:
@@ -80,12 +83,12 @@ apply_change_nio(uip_lladdr_t *nio, uint8_t handoff, struct sockaddr_in6 *addr, 
 }
 
 void
-hoag_add_nio(uip_lladdr_t *nio, uint8_t handoff, uint8_t *buff, int *t_len, uint8_t *out_status, uint8_t *out_handoff, struct sockaddr_in6 *addr, socklen_t addr_len)
+hoag_add_nio(uip_lladdr_t *nio, uint8_t handoff, uint8_t *buff, int *t_len, uint8_t *out_status, uint8_t *out_handoff, uint8_t gw)
 {
   uint8_t status;
   int temp_len = *t_len;
 
-  status = apply_change_nio(nio, handoff, addr, addr_len);
+  status = apply_change_nio(nio, handoff, gw);
 
   if(status != *out_status) {
     MOB_BUFF_STATUS->type = MOB_OPT_STATUS;
@@ -109,11 +112,28 @@ inline void
 hoag_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen_t addr_len)
 {
   uint8_t handoff, out_handoff, out_status, *buff;
-  int temp_len;
+  int temp_len,i;
   struct mob_bind_ack *outbuff;
   uip_lladdr_t *nio;
+  uint8_t gw;
 
   outbuff = (mob_bind_ack *)&output_buffer[0];
+  nio = NULL;
+
+  for(i = 0; i < MAX_KNOWN_GATEWAY; ++i) {
+    if(gws[i].used) {
+      if(memcmp(&addr->sin6_addr,&gws[i].hoag_addr.sin6_addr,sizeof(struct in6_addr)) &&
+          addr->sin6_port == gws[i].hoag_addr.sin6_port) {
+        nio = (uip_lladdr_t *)&gw;
+        gw = i;
+        break;
+      }
+    }
+  }
+  if(nio == NULL) {
+    printf("6LBR not found\n");
+    return;
+  }
   nio = NULL;
 
   if (!(buffer->flag & MOB_FLAG_UP_A)) {
@@ -171,43 +191,45 @@ hoag_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen
   handoff = MOB_HANDOFF_NO_CHANGE;
   out_handoff = MOB_HANDOFF_NO_CHANGE;
   out_status = 0;
+  len -= MOB_LEN_BIND;
 
   while (temp_len<len) {
     switch(MOB_BUFF_OPT->type) {
       case MOB_OPT_PREFIX:
         if(nio != NULL) {
-          hoag_add_nio(nio,handoff,buff,&temp_len,&out_status,&out_handoff,addr,addr_len);
+          hoag_add_nio(nio,handoff,buff,&temp_len,&out_status,&out_handoff,gw);
           nio = NULL;
         }
         handoff = MOB_HANDOFF_NO_CHANGE;
-        printf("Not Implemented : MOB_OPT_PREFIX\n");
+        printf("Not Implemented : MOB_OPT_PREFIX : %u \n",temp_len);
         break;
       case MOB_OPT_PREF:
         if(nio != NULL) {
-          hoag_add_nio(nio,handoff,buff,&temp_len,&out_status,&out_handoff,addr,addr_len);
+          hoag_add_nio(nio,handoff,buff,&temp_len,&out_status,&out_handoff,gw);
           nio = NULL;
         }
         handoff = MOB_BUFF_PREF->hi;
-        printf("Not Implemented : MOB_OPT_PREF\n");
+        printf("Not Implemented : MOB_OPT_PREF : %u \n",temp_len);
         break;
       case MOB_OPT_NIO:
+        printf("Implemented : MOB_OPT_NIO : %u \n",temp_len);
         if(nio != NULL) {
-          hoag_add_nio(nio,handoff,buff,&temp_len,&out_status,&out_handoff,addr,addr_len);
+          hoag_add_nio(nio,handoff,buff,&temp_len,&out_status,&out_handoff,gw);
         }
         nio = &MOB_BUFF_NIO->addr;
         break;
       case MOB_OPT_TIMESTAMP:
-        printf("Not Implemented : MOB_OPT_TIMESTAMP\n");
+        printf("Not Implemented : MOB_OPT_TIMESTAMP : %u \n",temp_len);
         break;
       default:
-        printf("Unknown stuff : %u\n",(MOB_BUFF_OPT->type));
+        printf("Unknown stuff : %u at %u \n",(MOB_BUFF_OPT->type),temp_len);
         break;
     }
     temp_len += MOB_BUFF_OPT->len+2;
   }
 
   if(nio != NULL) {
-    hoag_add_nio(nio,handoff,buff,&temp_len,&out_status,&out_handoff,addr,addr_len);
+    hoag_add_nio(nio,handoff,buff,&temp_len,&out_status,&out_handoff,gw);
   }
 
   if (temp_len != 0) {
@@ -245,7 +267,6 @@ hoag_new_gw(mob_new_lbr *target)
 
   unused_elt->hoag_addr.sin6_port = htons(port);
   unused_elt->hoag_addr.sin6_flowinfo = 0;
-//  convert(&unused_elt->hoag_addr.sin6_addr,&target->addr);
   memcpy(&unused_elt->hoag_addr.sin6_addr, &target->addr, sizeof(struct sockaddr_in6));
   unused_elt->hoag_addr.sin6_scope_id = 0;
 
@@ -259,6 +280,7 @@ hoag_new_gw(mob_new_lbr *target)
 
   unused_elt->devnum = tunnelnum++;
   tunnel_server_create(tuneldev, unused_elt->devnum, &unused_elt->hoag_addr);
+  convert(&unused_elt->hoag_addr.sin6_addr,&target->addr);
 }
 
 void
