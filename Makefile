@@ -21,13 +21,13 @@ obj_init:
 
 prog: obj_init $(SOURCES_CO_OBJ) obj/mob-action.co obj/main.co
 	gcc -Wall -g $(EXTERN_LIB) -o $@ $(SOURCES_CO_OBJ) obj/mob-action.co obj/main.co
-	sudo chown root:root prog
-	sudo chmod u+s prog
+	sudo chown root:root $@
+	sudo chmod u+s $@
 
 prog2: obj_init $(SOURCES_CO_OBJ) obj/hoag-action.co obj/main2.co
 	gcc -Wall -g $(EXTERN_LIB) -o $@ $(SOURCES_CO_OBJ) obj/hoag-action.co obj/main2.co
-	sudo chown root:root prog
-	sudo chmod u+s prog
+	sudo chown root:root $@
+	sudo chmod u+s $@
 
 clean:
 	rm -f obj/*.a obj/*.co obj/*.d obj/**/*.a obj/**/*.co obj/**/*.d
