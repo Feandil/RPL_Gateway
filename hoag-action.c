@@ -116,42 +116,42 @@ hoag_proceed_up(mob_bind_up *buff, int len, struct sockaddr_in6 *addr, socklen_t
   outbuff = (mob_bind_ack *)&output_buffer[0];
   nio = NULL;
 
-  if (!buff->flag && MOB_FLAG_UP_A) {
+  if (!buff->flag & MOB_FLAG_UP_A) {
     printf("UDP IN : Flag unimplemented (!A)");
     return;
   }
 
-  if (!buff->flag && MOB_FLAG_UP_H) {
+  if (!buff->flag & MOB_FLAG_UP_H) {
     printf("UDP IN : Flag unimplemented (!H)");
     return;
   }
 
-  if (!buff->flag && MOB_FLAG_UP_L) {
+  if (!buff->flag & MOB_FLAG_UP_L) {
     printf("UDP IN : Flag unimplemented (!L)");
     return;
   }
 
-  if (buff->flag && MOB_FLAG_UP_K) {
+  if (buff->flag & MOB_FLAG_UP_K) {
     printf("UDP IN : Flag unimplemented (K)");
     return;
   }
 
-  if (buff->flag && MOB_FLAG_UP_M) {
+  if (buff->flag & MOB_FLAG_UP_M) {
     printf("UDP IN : Flag unimplemented (M)");
     return;
   }
 
-  if (buff->flag && MOB_FLAG_UP_R) {
+  if (buff->flag & MOB_FLAG_UP_R) {
     printf("UDP IN : Flag unimplemented (R)");
     return;
   }
 
-  if (!buff->flag && MOB_FLAG_UP_P) {
+  if (!buff->flag & MOB_FLAG_UP_P) {
     printf("UDP IN : Flag unimplemented (!P)");
     return;
   }
 
-  if (!buff->flag && MOB_FLAG_UP_O) {
+  if (!buff->flag & MOB_FLAG_UP_O) {
     printf("UDP IN : Flag unimplemented (!O)");
     return;
   }

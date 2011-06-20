@@ -7,7 +7,7 @@
 
 #include "uip6.h"
 
-#define MOB_SEND_DELAY 20
+#define MOB_SEND_DELAY 2
 #define MAX_DELETE_NIO 20
 #define MAX_KNOWN_GATEWAY 5
 

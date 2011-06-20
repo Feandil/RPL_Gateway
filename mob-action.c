@@ -51,7 +51,7 @@ mob_send_message(struct ev_loop *loop, struct ev_timer *w, int revents)
     w->repeat = 0;
   }
 
-  hdr = (ext_hdr*) &output_buffer[0];
+  hdr = (ext_hdr*) output_buffer;
   hdr->type = MOB_TYPE;
   hdr->mess = MOB_HR_UPDATE;
   data = (mob_bind_up*) &hdr->next;
@@ -63,6 +63,7 @@ mob_send_message(struct ev_loop *loop, struct ev_timer *w, int revents)
   data->flag |= MOB_FLAG_UP_L;
   data->flag |= MOB_FLAG_UP_P;
   data->flag |= MOB_FLAG_UP_O;
+
   data->reserved = 0;
 
   data->lifetime = 0; /* Not implemented */
@@ -96,6 +97,8 @@ printf("\n");
       temp_len += MOB_OPT_NIO;
     }
   }
+  if (data->flag && MOB_FLAG_UP_K) printf("ERGGGGG 44");
+
   for(i=0;i<MAX_DELETE_NIO;++i) {
     if(deleted[i].used) {
       if (handoff_status != MOB_HANDOFF_UNKNOWN) {
@@ -115,10 +118,13 @@ printf("Del NIO\n");
       temp_len += MOB_OPT_NIO;
     }
   }
+  if (data->flag && MOB_FLAG_UP_K) printf("ERGGGGG 42");
+
   if(temp_len != 0) {
     hdr->len = temp_len + MOB_LEN_BIND;
+  if (data->flag && MOB_FLAG_UP_K) printf("ERGGGGG 43");
 
-    udp_output(&output_buffer[0],hdr->len + MOB_LEN_HDR, &hoag_addr, hoag_addr_len);
+    udp_output(&output_buffer[0],hdr->len + MOB_LEN_HDR, &hoag_addr);
   }
 }
 
@@ -181,22 +187,22 @@ mob_incoming_ack(uint8_t *buffer, int len) {
 
   buff = (mob_bind_ack *) buffer;
 
-  if (buff && MOB_FLAG_ACK_K) {
+  if (buff & MOB_FLAG_ACK_K) {
     printf("UDP IN : Flag unimplemented (K)");
     return;
   }
 
-  if (buff && MOB_FLAG_ACK_R) {
+  if (buff & MOB_FLAG_ACK_R) {
     printf("UDP IN : Flag unimplemented (R)");
     return;
   }
 
-  if (!buff && MOB_FLAG_ACK_P) {
+  if (!buff & MOB_FLAG_ACK_P) {
     printf("UDP IN : Flag not set (P) (unimplemented)");
     return;
   }
 
-  if (!buff && MOB_FLAG_ACK_O) {
+  if (!buff & MOB_FLAG_ACK_O) {
     printf("UDP IN : Flag not set (O) (unimplemented)");
     return;
   }
@@ -312,7 +318,7 @@ mob_send_lbr(uip_ip6addr_t *lbr) {
 
   data->reserved = 0;
   memcpy(&data->addr,lbr,sizeof(uip_ip6addr_t));
-  udp_output(&output_buffer[0],hdr->len + MOB_LEN_HDR, &hoag_addr, hoag_addr_len);
+  udp_output(&output_buffer[0],hdr->len + MOB_LEN_HDR, &hoag_addr);
 }
 
 void
