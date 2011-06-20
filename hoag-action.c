@@ -252,8 +252,8 @@ hoag_new_gw(mob_new_lbr *target)
   output_buffer[0]='\n';
   output_buffer[1]='\0';
 
-  udp_output(output_buffer, 1, &unused_elt->hoag_addr, port);
-  udp_output(output_buffer, 1, &unused_elt->hoag_addr, port);
+  udp_output(output_buffer, 1, &unused_elt->hoag_addr);
+  udp_output(output_buffer, 1, &unused_elt->hoag_addr);
 
   unused_elt->devnum = tunnelnum++;
   tunnel_server_create(tuneldev, unused_elt->devnum, &unused_elt->hoag_addr);
