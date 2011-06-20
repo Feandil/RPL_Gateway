@@ -4,6 +4,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include "uip6.h"
+#include "mobility.h"
 
 #define MAX_NIO 200
 #define MAX_KNOWN_GATEWAY 5
@@ -29,5 +30,9 @@ typedef struct hoag_nio_list {
 void hoag_init(int p, uip_ipaddr_t *pre, char* devname);
 void hoag_receive_udp(uint8_t *buffer, int read, struct sockaddr_in6 *addr, socklen_t addr_len);
 void hoag_close_tunnels(void);
+
+//temp
+void hoag_new_gw(struct mob_new_lbr *target);
+
 
 #endif /* __HOAG_ACTION_H__ */

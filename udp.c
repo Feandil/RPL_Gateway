@@ -67,21 +67,26 @@ udp_init(int port, char *tuneldev, char *tundev, char *ipaddr)
     return -1;
   }
 
-  if ((udp_io=(udp_io_t *)malloc(sizeof(struct udp_io_t)))==NULL)
+  if ((udp_io=(udp_io_t *)malloc(sizeof(struct udp_io_t)))==NULL) {
+    printf("malloc error");
     return -1;
+  }
   memset(udp_io,0,sizeof(struct udp_io_t));
 
   udp_io->fd = socket(PF_INET6, SOCK_DGRAM, 0);
 
   if( udp_io->fd < 0 ) {
+    printf("Unable to open ipv6 socket");
     return -1;
   }
 
   udp_io->addr.sin6_port = htons(port);
   udp_io->addr.sin6_family = AF_INET6;
 
-  if (bind (udp_io->fd, (struct sockaddr *) &udp_io->addr, sizeof (udp_io->addr)) < 0)
+  if (bind (udp_io->fd, (struct sockaddr *) &udp_io->addr, sizeof (udp_io->addr)) < 0) {
+    printf("Unable to bind");
     return -1;
+  }
 
   udp_io->addr.sin6_port=0;
   tunnel_created = 0;
@@ -100,10 +105,10 @@ udp_close(void)
 }
 
 void
-udp_output(uint8_t *ptr, int size, struct sockaddr_in6 *addr, int port)
+udp_output(uint8_t *ptr, int size, struct sockaddr_in6 *addr)
 {
   int res;
-  res=sendto(udp_io->fd,ptr,size,0,(struct sockaddr *)addr,port);
-  printf("udpout %i: %i",size,res);
+  res=sendto(udp_io->fd,ptr,size,0,(struct sockaddr *)addr, sizeof(struct sockaddr_in6));
+  printf("udpout %i: %i\n",size,res);
 }
 

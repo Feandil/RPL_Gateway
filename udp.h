@@ -20,7 +20,7 @@ typedef struct udp_io_t {
 } udp_io_t;
 
 int udp_init(int port, char *tuneldev, char *tundev, char *ipaddr);
-void udp_output(uint8_t *ptr, int size, struct sockaddr_in6 *addr, int port);
+void udp_output(uint8_t *ptr, int size, struct sockaddr_in6 *addr);
 void udp_close(void);
 
 #endif /* __UDP_H__ */

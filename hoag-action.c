@@ -243,15 +243,17 @@ hoag_new_gw(mob_new_lbr *target)
   unused_elt->hoag_addr.sin6_family = AF_INET6;
   unused_elt->hoag_addr.sin6_port = port;
   unused_elt->hoag_addr.sin6_flowinfo = 0;
-  convert(&unused_elt->hoag_addr.sin6_addr,&target->addr);
+//  convert(&unused_elt->hoag_addr.sin6_addr,&target->addr);
+  memcpy(&unused_elt->hoag_addr.sin6_addr, &target->addr, sizeof(struct sockaddr_in6));
   unused_elt->hoag_addr.sin6_scope_id = 0;
 
   unused_elt->hoag_addr_len = sizeof(struct sockaddr_in6);
 
   output_buffer[0]='\n';
+  output_buffer[1]='\0';
 
-  udp_output(&output_buffer[0], 1, &unused_elt->hoag_addr, port);
-  udp_output(&output_buffer[0], 1, &unused_elt->hoag_addr, port);
+  udp_output(output_buffer, 1, &unused_elt->hoag_addr, port);
+  udp_output(output_buffer, 1, &unused_elt->hoag_addr, port);
 
   unused_elt->devnum = tunnelnum++;
   tunnel_server_create(tuneldev, unused_elt->devnum, &unused_elt->hoag_addr);

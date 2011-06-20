@@ -74,7 +74,7 @@ tunnel_server_create(char *tuneldevbase, uint8_t tunneldev_int, struct sockaddr_
   char ip[128];
   int ret;
 
-  if(inet_ntop(AF_INET6,(void*)(&addr->sin6_addr),&(ip[0]),8*sizeof(struct in6_addr)) == NULL) {
+  if(inet_ntop(AF_INET6,(void*)(&addr->sin6_addr),ip,8*sizeof(struct in6_addr)) == NULL) {
     printf("Impossible to understand incomming IP\n");
     return 42;
   }
