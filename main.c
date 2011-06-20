@@ -84,7 +84,7 @@ main (int argc, char *argv[]) {
 
   init_ttyUSBX(0);
 
-  udp_init(port,&(tun[0]),&(id[0]),&(publicip[0]));
+  udp_init(port,tun,id,publicip);
 
 
   event_launch();

@@ -42,7 +42,9 @@
 #define DEBUG 1
 
 #include "uip-debug.h"
-#include "mob-action.h"
+
+void mob_new_6lbr(uip_ip6addr_t *lbr);
+void mob_new_node(void);
 
 /*---------------------------------------------------------------------------*/
 #define RPL_DIO_GROUNDED                 0x80

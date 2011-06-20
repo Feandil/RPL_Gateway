@@ -21,38 +21,31 @@ down(int sig) {
   printf("\ndie\n");
   event_stop();
   udp_close();
-  clear_tunnel();
+  hoag_close_tunnels();
 }
 
 int
 main (int argc, char *argv[]) {
 
   int port = 23423;
-  char id[] = "tun0";
+  int distantport = 23423;
   char tun[] = "tunlbr";
-  char ip[] = "fc00::1";
-  char publicip[] = "2001:660:5301:18:223:dfff:fe8d:4efc";
+  char publicip[] = "2001:660:5301:18:4a5b:39ff:fe19:3bd5";
+  char distantip[] = "2001:660:5301:18:223:dfff:fe8d:4efc";
   uip_ipaddr_t ipaddr;
   uip_ip6addr_t prefix;
-  rpl_dag_t *dag;
-  uip_ds6_route_t *rep;
+
+  memset(&prefix,0,sizeof(uip_ip6addr_t));
 
   prefix.u8[0]=0xfc;
-  prefix.u8[1]=0x00;
-  prefix.u8[2]=0x00;
-  prefix.u8[3]=0x00;
-  prefix.u8[4]=0x00;
-  prefix.u8[5]=0x00;
-  prefix.u8[6]=0x00;
-  prefix.u8[7]=0x00;
-
 
   signal(SIGINT, down);
 
   event_init();
 
-  hoag_init();
-  udp_init(port,&(tun[0]),&(id[0]),&(publicip[0]));
+  tunnel_server_init(publicip);
+  hoag_init(distantport,(uip_ipaddr_t *)&prefix,&tun);
+  udp_init(port,NULL,NULL,publicip);
 
   event_launch();
 

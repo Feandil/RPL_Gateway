@@ -7,6 +7,14 @@
 char *tldev = NULL;
 char *tdev = NULL;
 
+const char *locipaddr;
+
+void
+tunnel_server_init(const char *ip)
+{
+  locipaddr=ip;
+}
+
 int
 tunnel_client_create(char *tuneldev, char *tundev, const char *ipaddr, struct sockaddr_in6 *addr, socklen_t addr_len)
 {
@@ -60,7 +68,7 @@ tunnel_client_create(char *tuneldev, char *tundev, const char *ipaddr, struct so
 }
 
 int
-tunnel_server_create(char *tuneldevbase, uint8_t tunneldev_int, const char *ipaddr, struct sockaddr_in6 *addr)
+tunnel_server_create(char *tuneldevbase, uint8_t tunneldev_int, struct sockaddr_in6 *addr)
 {
   char cmd[1024];
   char ip[128];
@@ -71,7 +79,7 @@ tunnel_server_create(char *tuneldevbase, uint8_t tunneldev_int, const char *ipad
     return 42;
   }
 
-  sprintf(cmd,"ip -6 tunnel add %s%u mode ip6ip6 remote %s local %s", tuneldevbase, tunneldev_int, ip, ipaddr);
+  sprintf(cmd,"ip -6 tunnel add %s%u mode ip6ip6 remote %s local %s", tuneldevbase, tunneldev_int, ip, locipaddr);
   printf("SH : %s\n",cmd);
   ret = system(cmd);
   if( ret < 0 ) {
@@ -97,28 +105,21 @@ tunnel_server_create(char *tuneldevbase, uint8_t tunneldev_int, const char *ipad
 void
 clear_tunnel(void) {
   char cmd[1024];
-  int ret;
   if(tldev != NULL) {
     sprintf(cmd,"ip -6 tunnel del %s", tldev);
     printf("SH : %s\n",cmd);
-    ret = system(cmd);
     sprintf(cmd,"ip rule del iif %s table %s.%s", tdev, tldev, tdev);
     printf("SH : %s\n",cmd);
-    ret = system(cmd);
     sprintf(cmd,"ip -6 route flush table %s.%s", tldev, tdev);
     printf("SH : %s\n",cmd);
-    ret = system(cmd);
     sprintf(cmd,"sed -i -e /42\\ %s.%s/d /etc/iproute2/rt_tables", tldev, tdev);
     printf("SH : %s\n",cmd);
-    ret = system(cmd);
   }
 }
 
 void
-close_tunnel(char* dev, uint8_t i) {
+close_tunnel(char* devbase, uint8_t i) {
   char cmd[1024];
-  int ret;
-  sprintf(cmd,"ip -6 tunnel del %s%u", dev, i);
+  sprintf(cmd,"ip -6 tunnel del %s%u", devbase, i);
   printf("SH : %s\n",cmd);
-  ret = system(cmd);
 }

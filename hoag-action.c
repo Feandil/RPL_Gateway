@@ -8,6 +8,7 @@
 #include "sys/event.h"
 #include "lib/tool.h"
 #include "udp.h"
+#include "tunnel.h"
 
 #define MOB_BUFF_OPT                    ((mob_opt *)(buff + temp_len))
 #define MOB_BUFF_PREFIX          ((mob_opt_prefix *)(buff + temp_len))
@@ -25,18 +26,26 @@ uint8_t output_buffer[1280];
 int port;
 uip_ipaddr_t prefix;
 
+char tuneldev[MAX_DEVNAME_SIZE];
+uint8_t tunnelnum;
+
+
+char cmd[512];
+
+
 void
-hoag_init(int p, uip_ipaddr_t pre)
+hoag_init(int p, uip_ipaddr_t *pre, char* devname)
 {
   port = p;
-  memcpy(&prefix,&pre,sizeof(uip_ipaddr_t));
+  memcpy(&prefix,pre,sizeof(uip_ipaddr_t));
+
+  strncpy(tuneldev,devname,MAX_DEVNAME_SIZE-1);
+  tunnelnum = 0;
 }
 
 inline int
 change_route(char *dest, char *gw, char *command)
 {
-  char cmd[512];
-
   sprintf(cmd,"ip -6 route %s %s via %s", command, dest , gw);
   printf("SH : %s\n",cmd);
   return system(cmd);
@@ -48,21 +57,21 @@ apply_change_nio(uip_lladdr_t *nio, uint8_t handoff, struct sockaddr_in6 *addr, 
   char gw[128];
   char dest[128];
 
-  memcpy(((uint8_t*)(&prefix))+sizeof(uip_lladdr_t),nio,sizeof(uip_lladdr_t));
-  toString(&prefix,&(dest[0]));
+  memcpy(((uint8_t*)&prefix)+sizeof(uip_lladdr_t),nio,sizeof(uip_lladdr_t));
+  toString(&prefix,dest);
 
-  if(inet_ntop(AF_INET6,(void*)(&addr->sin6_addr),&(gw[0]),8*sizeof(struct in6_addr)) == NULL) {
+  if(inet_ntop(AF_INET6,(void*)(&addr->sin6_addr),gw,8*sizeof(struct in6_addr)) == NULL) {
     printf("Impossible to understand incomming IP\n");
     return MOB_STATUS_ERR_FLAG;
   }
 
   switch(handoff) {
     case MOB_HANDOFF_UNKNOWN:
-        change_route(&(dest[0]),  &(gw[0]), "del");
+        change_route(dest, gw, "del");
         break;
     default:
-        change_route(&(dest[0]),  &(gw[0]), "del");
-        if(change_route(&(dest[0]),  &(gw[0]), "add") < 0) {
+        change_route(dest, gw, "del");
+        if(change_route(dest, gw, "add") < 0) {
           return MOB_STATUS_ERR_FLAG;
         }
         break;
@@ -211,6 +220,9 @@ hoag_new_gw(mob_new_lbr *target)
 {
   int i;
   hoag_gw_list *unused_elt = NULL;
+  char gw[128];
+
+  toString(&target->addr,gw);
 
   for(i = 0; i < MAX_KNOWN_GATEWAY; ++i) {
     if(gws[i].used) {
@@ -222,8 +234,12 @@ hoag_new_gw(mob_new_lbr *target)
     }
   }
 
+  if(unused_elt == NULL) {
+    printf("NO PLACE FOR NEW 6LBR !!!");
+    return;
+  }
+
   unused_elt->used = 1;
-  unused_elt->sequence = 0;
   unused_elt->hoag_addr.sin6_family = AF_INET6;
   unused_elt->hoag_addr.sin6_port = port;
   unused_elt->hoag_addr.sin6_flowinfo = 0;
@@ -236,6 +252,21 @@ hoag_new_gw(mob_new_lbr *target)
 
   udp_output(&output_buffer[0], 1, &unused_elt->hoag_addr, port);
   udp_output(&output_buffer[0], 1, &unused_elt->hoag_addr, port);
+
+  unused_elt->devnum = tunnelnum++;
+  tunnel_server_create(tuneldev, unused_elt->devnum, &unused_elt->hoag_addr);
+
+  sprintf(cmd,"ip -6 route add %s dev %s%u", gw, tuneldev, unused_elt->devnum);
+  printf("SH : %s\n",cmd);
+  system(cmd);
+}
+
+void
+hoag_delete_gw(int gw)
+{
+  gws[gw].used = 0;
+
+  close_tunnel(tuneldev,gws[gw].devnum);
 }
 
 void
@@ -281,4 +312,32 @@ hoag_receive_udp(uint8_t *buffer, int read, struct sockaddr_in6 *addr, socklen_t
 void
 receive_udp(uint8_t *buffer, int read, struct sockaddr_in6 *addr, socklen_t addr_len) {
   hoag_receive_udp(buffer, read, addr, addr_len);
+}
+
+void
+udp_connected(struct sockaddr_in6 *addr, socklen_t addr_len, char* tldev, char* tdev, char *iaddr)
+{
+}
+
+void
+mob_new_6lbr(uip_ip6addr_t *lbr)
+{
+}
+
+
+void
+mob_new_node(void)
+{
+}
+
+void
+hoag_close_tunnels(void)
+{
+  int i;
+
+  for(i = 0; i < MAX_KNOWN_GATEWAY; ++i) {
+    if(gws[i].used) {
+      hoag_delete_gw(i);
+    }
+  }
 }
