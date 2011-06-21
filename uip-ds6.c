@@ -114,43 +114,6 @@ uip_ds6_list_loop(uip_ds6_element_t *list, uint8_t size,
   return *out_element != NULL ? FREESPACE : NOSPACE;
 }
 
-/*---------------------------------------------------------------------------*/
-uint8_t
-uip_ds6_list_clean(uip_ds6_timed_element_t *list, uint8_t size,
-                  uint16_t elementsize, uint8_t type,
-                  uip_ds6_timed_element_t **out_element)
-{
-  uip_ds6_timed_element_t *element;
-
-  for(element = list;
-      element <
-      (uip_ds6_timed_element_t *)((uint8_t *)list + (size * elementsize));
-      element = (uip_ds6_timed_element_t *)((uint8_t *)element + elementsize)) {
-    if(element->isused) {
-      if(!element->isinfinite
-            && stimestamp_expired(&(element->lifetime))) {
-        switch(type) {
-          case UIP_DS6_ADDR:
-            uip_ds6_addr_rm((uip_ds6_addr_t *)element);
-            break;
-          case UIP_DS6_PREFIX:
-            uip_ds6_prefix_rm((uip_ds6_prefix_t *)element);
-            break;
-          default:
-            element->isused=0;
-        }
-        *out_element = element;
-        return FREESPACE;
-      }
-    } else {
-      *out_element = element;
-      return FREESPACE;
-    }
-  }
-  *out_element = NULL;
-  return NOSPACE;
-}
-/*---------------------------------------------------------------------------*/
 uip_ds6_prefix_t *
 uip_ds6_prefix_add(uip_ipaddr_t *ipaddr, uint8_t ipaddrlen,
                    uint8_t advertise, uint8_t flags, unsigned long vtime,
@@ -215,6 +178,25 @@ uip_ds6_is_addr_onlink(uip_ipaddr_t *ipaddr)
 }
 
 /*---------------------------------------------------------------------------*/
+inline void
+uip_ds6_addr_clean(void)
+{
+  uip_ds6_addr_t *element;
+
+  for(element = uip_ds6_if.addr_list;
+      element < uip_ds6_if.addr_list + UIP_DS6_ADDR_NB;
+      ++element) {
+    if(!element->isinfinite
+        && stimestamp_expired(&(element->vlifetime))) {
+      uip_ds6_addr_rm(element);
+      locaddr = element;
+      loc_loop_state = FREESPACE;
+      return;
+    }
+  }
+}
+
+/*---------------------------------------------------------------------------*/
 uip_ds6_addr_t *
 uip_ds6_addr_add(uip_ipaddr_t *ipaddr, unsigned long vlifetime, uint8_t type)
 {
@@ -223,14 +205,11 @@ uip_ds6_addr_add(uip_ipaddr_t *ipaddr, unsigned long vlifetime, uint8_t type)
       sizeof(uip_ds6_addr_t), ipaddr, 128,
       (uip_ds6_element_t **)&locaddr);
 
-  if( loc_loop_state == NOSPACE ) {
-    loc_loop_state = uip_ds6_list_clean
-     ((uip_ds6_timed_element_t *)uip_ds6_if.addr_list, UIP_DS6_ADDR_NB,
-      sizeof(uip_ds6_addr_t), UIP_DS6_ADDR,
-      (uip_ds6_timed_element_t **)&locaddr);
-  }
+  if(loc_loop_state == NOSPACE) {
+    uip_ds6_addr_clean();
+   }
 
-  if( loc_loop_state == FREESPACE) {
+  if(loc_loop_state == FREESPACE) {
     locaddr->isused = 1;
     uip_ipaddr_copy(&locaddr->ipaddr, ipaddr);
     locaddr->type = type;

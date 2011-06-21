@@ -18,7 +18,6 @@ typedef struct hoag_gw_list {
   uint8_t devnum;
 //  uint16_t sequence;
   struct sockaddr_in6 hoag_addr;
-  socklen_t hoag_addr_len;
 } hoag_gw_list;
 
 typedef struct hoag_nio_list {
