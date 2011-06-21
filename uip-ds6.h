@@ -148,42 +148,37 @@
 #define FREESPACE 1
 #define NOSPACE 2
 
-/** \brief DS6 entry type definitions */
-#define UIP_DS6_ADDR 1
-#define UIP_DS6_DEFRT 2
-#define UIP_DS6_PREFIX 3
-
 /** \brief A prefix list entry */
 typedef struct uip_ds6_prefix {
-  uint8_t isused;
   uip_ipaddr_t ipaddr;
+  uint8_t isused;
   uint8_t length;
   uint8_t advertise;
+  uint8_t l_a_reserved; /**< on-link and autonomous flags + 6 reserved bits */
   u32_t vlifetime;
   u32_t plifetime;
-  uint8_t l_a_reserved; /**< on-link and autonomous flags + 6 reserved bits */
 } uip_ds6_prefix_t;
 
 /** * \brief Unicast address structure */
 typedef struct uip_ds6_addr {
-  uint8_t isused;
   uip_ipaddr_t ipaddr;
-  struct stimestamp vlifetime;
+  uint8_t isused;
   uint8_t isinfinite;
   uint8_t state;
   uint8_t type;
+  struct stimestamp vlifetime;
 } uip_ds6_addr_t;
 
 /** \brief Anycast address  */
 typedef struct uip_ds6_aaddr {
-  uint8_t isused;
   uip_ipaddr_t ipaddr;
+  uint8_t isused;
 } uip_ds6_aaddr_t;
 
 /** \brief A multicast address */
 typedef struct uip_ds6_maddr {
-  uint8_t isused;
   uip_ipaddr_t ipaddr;
+  uint8_t isused;
 } uip_ds6_maddr_t;
 
 /** \brief define some additional RPL related route state and
@@ -191,11 +186,11 @@ typedef struct uip_ds6_maddr {
 
 /* Needed for the extended route entry state when using ContikiRPL */
 typedef struct rpl_route_entry {
-  struct stimestamp lifetime;
-  void *dag;
   uint8_t learned_from;
-  struct stimestamp hoag_lifetime;
   uint8_t pushed;
+  void *dag;
+  struct stimestamp lifetime;
+  struct stimestamp hoag_lifetime;
 } rpl_route_entry_t;
 
 int rpl_route_clean(rpl_route_entry_t *state);
@@ -209,7 +204,7 @@ int rpl_route_clean(rpl_route_entry_t *state);
 #define RPL_ROUTE_FROM_UNICAST_DAO      1
 #define RPL_ROUTE_FROM_MULTICAST_DAO    2
 #define RPL_ROUTE_FROM_DIO              3
-#define RPL_ROUTE_FROM_ANOTHER_ROOT     4
+#define RPL_ROUTE_FROM_6LBR             4
 #endif /* UIP_DS6_ROUTE_STATE_TYPE */
 
 /* only define the callback if RPL is active */
@@ -219,13 +214,13 @@ int rpl_route_clean(rpl_route_entry_t *state);
 
 /** \brief An entry in the routing table */
 typedef struct uip_ds6_route {
-  uint8_t isused;
   uip_ipaddr_t ipaddr;
+  uint8_t isused;
+  uint8_t length;
+  uint8_t metric;
 #ifdef UIP_DS6_ROUTE_STATE_TYPE
   UIP_DS6_ROUTE_STATE_TYPE state;
 #endif
-  uint8_t length;
-  uint8_t metric;
   uip_ipaddr_t nexthop;
 } uip_ds6_route_t;
 
@@ -241,16 +236,9 @@ typedef struct uip_ds6_netif {
 
 /** \brief Generic types for a DS6, to use a common loop though all DS */
 typedef struct uip_ds6_element {
-  uint8_t isused;
   uip_ipaddr_t ipaddr;
+  uint8_t isused;
 } uip_ds6_element_t;
-
-typedef struct uip_ds6_timed_element {
-  uint8_t isused;
-  uip_ipaddr_t ipaddr;
-  struct stimestamp lifetime;
-  uint8_t isinfinite;
-} uip_ds6_timed_element_t;
 
 
 /*---------------------------------------------------------------------------*/

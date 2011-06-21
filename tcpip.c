@@ -128,10 +128,9 @@ tcpip_ipv6_output(void)
           case RPL_ROUTE_FROM_INTERNAL:
             routage_type = ROUTAGE_WAN;
             break;
-          case RPL_ROUTE_FROM_ANOTHER_ROOT:
-            //TODO
+          case RPL_ROUTE_FROM_6LBR:
+            /* We do not support rerouting from the backups */
             return;
-            break;
           default:
             routage_type = ROUTAGE_LAN;
             break;

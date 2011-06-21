@@ -16,6 +16,7 @@
 #include "tcpip.h"
 
 struct tun_io_t *tun_io;
+void rpl_remove_header(void);
 
 void
 tun_readable_cb (struct ev_loop *loop, struct ev_io *w, int revents)
@@ -36,6 +37,7 @@ tun_readable_cb (struct ev_loop *loop, struct ev_io *w, int revents)
       } else{
         memcpy(uip_buf,tun_io->buffer,tun_io->read);
         uip_len = tun_io->read;
+        rpl_remove_header();
         tcpip_input();
       }
     }
