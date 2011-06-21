@@ -203,7 +203,7 @@ mob_incoming_ack(uint8_t *buffer, int len) {
     return;
   }
 
-  temp_len = sizeof(mob_bind_ack);
+  temp_len = MOB_LEN_ACK;
   status = buff->status;
   handoff = MOB_HANDOFF_NO_CHANGE;
 

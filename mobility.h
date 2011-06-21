@@ -25,6 +25,7 @@ typedef struct mob_bind_ack {
   uint8_t flag;
   uint16_t sequence;
   uint16_t lifetime;
+  uint8_t options;
 } mob_bind_ack;
 
 typedef struct mob_new_lbr {

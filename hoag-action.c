@@ -112,12 +112,12 @@ inline void
 hoag_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen_t addr_len)
 {
   uint8_t handoff, out_handoff, out_status, *buff;
-  int temp_len,i;
+  int temp_len,out_len,i;
+  struct ext_hdr *hdr;
   struct mob_bind_ack *outbuff;
   uip_lladdr_t *nio;
   uint8_t gw;
 
-  outbuff = (mob_bind_ack *)&output_buffer[0];
   nio = NULL;
 
   for(i = 0; i < MAX_KNOWN_GATEWAY; ++i) {
@@ -179,25 +179,25 @@ hoag_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen
   /* TODO : Do some auth */
   /* TODO : verify sequence */
 
-  outbuff->status = 0;
-  outbuff->flag = 0;
-  outbuff->flag |= MOB_FLAG_ACK_P;
-  outbuff->flag |= MOB_FLAG_ACK_O;
-  outbuff->sequence = buffer->sequence;
-  outbuff->lifetime = 0;
-
+  hdr = (ext_hdr*) output_buffer;
+  outbuff = (mob_bind_ack *) &hdr->next;
   buff = &(buffer->options);
+
   temp_len = 0;
   handoff = MOB_HANDOFF_NO_CHANGE;
+  out_len = 0;
   out_handoff = MOB_HANDOFF_NO_CHANGE;
   out_status = 0;
   len -= MOB_LEN_BIND;
 
+  printf("Total len : %u\n",len);
+
   while (temp_len<len) {
+   printf("pos : %u/%u\n", temp_len,len);
     switch(MOB_BUFF_OPT->type) {
       case MOB_OPT_PREFIX:
         if(nio != NULL) {
-          hoag_add_nio(nio,handoff,buff,&temp_len,&out_status,&out_handoff,gw);
+          hoag_add_nio(nio,handoff,&(outbuff->options),&out_len,&out_status,&out_handoff,gw);
           nio = NULL;
         }
         handoff = MOB_HANDOFF_NO_CHANGE;
@@ -205,7 +205,7 @@ hoag_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen
         break;
       case MOB_OPT_PREF:
         if(nio != NULL) {
-          hoag_add_nio(nio,handoff,buff,&temp_len,&out_status,&out_handoff,gw);
+          hoag_add_nio(nio,handoff,&(outbuff->options),&out_len,&out_status,&out_handoff,gw);
           nio = NULL;
         }
         handoff = MOB_BUFF_PREF->hi;
@@ -213,8 +213,11 @@ hoag_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen
         break;
       case MOB_OPT_NIO:
         printf("Implemented : MOB_OPT_NIO : %u \n",temp_len);
+printf("NIO :");
+   PRINTLLADDR(&MOB_BUFF_NIO->addr);
+printf("\n");
         if(nio != NULL) {
-          hoag_add_nio(nio,handoff,buff,&temp_len,&out_status,&out_handoff,gw);
+          hoag_add_nio(nio,handoff,&(outbuff->options),&out_len,&out_status,&out_handoff,gw);
         }
         nio = &MOB_BUFF_NIO->addr;
         break;
@@ -225,16 +228,27 @@ hoag_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen
         printf("Unknown stuff : %u at %u \n",(MOB_BUFF_OPT->type),temp_len);
         break;
     }
+    printf("tlv len : %u (pos : %u)\n", MOB_BUFF_OPT->len+2,temp_len);
     temp_len += MOB_BUFF_OPT->len+2;
+    printf("pos :%u\n",temp_len);
   }
 
   if(nio != NULL) {
-    hoag_add_nio(nio,handoff,buff,&temp_len,&out_status,&out_handoff,gw);
+    hoag_add_nio(nio,handoff,&(outbuff->options),&out_len,&out_status,&out_handoff,gw);
   }
 
-  if (temp_len != 0) {
+  if (out_len != 0) {
+    hdr->type = MOB_TYPE;
+    hdr->mess = MOB_HR_ACK;
+    hdr->len = out_len + MOB_LEN_ACK;
+    outbuff->status = 0;
+    outbuff->flag = 0;
+    outbuff->flag |= MOB_FLAG_ACK_P;
+    outbuff->flag |= MOB_FLAG_ACK_O;
+    outbuff->sequence = buffer->sequence;
+    outbuff->lifetime = 0;
 
-
+    udp_output(output_buffer,hdr->len + MOB_LEN_HDR, addr);
   }
 }
 
