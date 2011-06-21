@@ -15,7 +15,7 @@
 #define MOB_BUFF_NIO                ((mob_opt_nio *)(buff + temp_len))
 #define MOB_BUFF_TIMESTAMP    ((mob_opt_timestamp *)(buff + temp_len))
 
-#define LLADDR_FROM_IPADDR(addr)    ((uip_lladdr_t *)(((uint8_t*)addr) + 8 ))
+#define LLADDR_FROM_IPADDR(addr)    ( (uip_lladdr_t *)   (  ((uint8_t*)addr) + sizeof(uip_lladdr_t) )    )
 
 #define DEBUG 1
 #include "uip-debug.h"
@@ -79,7 +79,7 @@ printf("Mob_up construction : ");
         uip_ds6_routing_table[i].length == IP6_LEN &&
         uip_ds6_routing_table[i].state.pushed == 0) {
       if (handoff_status == 0) {
-printf("Add Handoff (new)\n");
+printf("Add Handoff (new) : %u \n",temp_len);
         MOB_BUFF_PREF->type = MOB_OPT_PREF;
         MOB_BUFF_PREF->len = MOB_LEN_HANDOFF - 2;
         MOB_BUFF_PREF->pref = 0;
@@ -87,17 +87,18 @@ printf("Add Handoff (new)\n");
         temp_len += MOB_LEN_HANDOFF;
         handoff_status = MOB_HANDOFF_NEW_BINDING;
       }
-printf("Add NIO : ");
+printf("Add NIO :  %u : ",temp_len);
 PRINT6ADDR(&uip_ds6_routing_table[i].ipaddr);
-printf("\n");
       MOB_BUFF_NIO->type = MOB_OPT_NIO;
       MOB_BUFF_NIO->len = MOB_LEN_NIO - 2;
       MOB_BUFF_NIO->reserved = 0;
       memcpy(&MOB_BUFF_NIO->addr, LLADDR_FROM_IPADDR(&uip_ds6_routing_table[i].ipaddr), sizeof(uip_lladdr_t));
-      temp_len += MOB_OPT_NIO;
+printf(" : ");
+PRINTLLADDR(&MOB_BUFF_NIO->addr);
+printf("\n");
+      temp_len += MOB_LEN_NIO;
     }
   }
-
   for(i=0;i<MAX_DELETE_NIO;++i) {
     if(deleted[i].used) {
       if (handoff_status != MOB_HANDOFF_UNKNOWN) {
@@ -114,13 +115,14 @@ printf("Del NIO\n");
       MOB_BUFF_NIO->len = MOB_LEN_NIO - 2;
       MOB_BUFF_NIO->reserved = 0;
       memcpy(&MOB_BUFF_NIO->addr, &deleted[i].addr, sizeof(uip_lladdr_t));
-      temp_len += MOB_OPT_NIO;
+      temp_len += MOB_LEN_NIO;
     }
   }
 
+  printf("End position : %u\n",temp_len);
   if(temp_len != 0) {
     hdr->len = temp_len + MOB_LEN_BIND;
-    udp_output(&output_buffer[0],hdr->len + MOB_LEN_HDR, &hoag_addr);
+    udp_output(output_buffer,hdr->len + MOB_LEN_HDR, &hoag_addr);
   }
 }
 
@@ -146,13 +148,16 @@ inline void
 mob_maj_entry(struct uip_lladdr_t *nio, uint8_t status, uint8_t handoff)
 {
   int i;
-
+printf("MAJ NIO");
+PRINTLLADDR(nio);
+printf("\n");
   if (!(status && MOB_STATUS_ERR_FLAG)) {
     switch(handoff) {
       case MOB_HANDOFF_UNKNOWN:
         for(i=0;i<MAX_DELETE_NIO;++i) {
           if(deleted[i].used &&
               (memcmp(nio,&deleted[i].addr,sizeof(uip_lladdr_t)) == 0)) {
+printf("deleted\n");
             deleted[i].used = 0;
             return;
           }
@@ -163,6 +168,7 @@ mob_maj_entry(struct uip_lladdr_t *nio, uint8_t status, uint8_t handoff)
           if(uip_ds6_routing_table[i].isused &&
               uip_ds6_routing_table[i].length == IP6_LEN &&
               (memcmp(LLADDR_FROM_IPADDR(&uip_ds6_routing_table[i].ipaddr),nio,sizeof(uip_lladdr_t)) == 0)) {
+printf("pushed\n");
             uip_ds6_routing_table[i].state.pushed = 1;
             return;
           }
@@ -175,37 +181,38 @@ mob_maj_entry(struct uip_lladdr_t *nio, uint8_t status, uint8_t handoff)
 inline void
 mob_incoming_ack(uint8_t *buffer, int len) {
 
-  mob_bind_ack *buff;
-  uint8_t status;
-  uint8_t handoff;
+  mob_bind_ack *ack_buff;
+  uint8_t status, handoff, *buff;
   int temp_len;
   struct uip_lladdr_t *nio = NULL;
 
-  buff = (mob_bind_ack *) buffer;
+  ack_buff = (mob_bind_ack *) buffer;
 
-  if (buff->flag & MOB_FLAG_ACK_K) {
+  if (ack_buff->flag & MOB_FLAG_ACK_K) {
     printf("UDP IN : Flag unimplemented (K)");
     return;
   }
 
-  if (buff->flag & MOB_FLAG_ACK_R) {
+  if (ack_buff->flag & MOB_FLAG_ACK_R) {
     printf("UDP IN : Flag unimplemented (R)");
     return;
   }
 
-  if (!(buff->flag & MOB_FLAG_ACK_P)) {
+  if (!(ack_buff->flag & MOB_FLAG_ACK_P)) {
     printf("UDP IN : Flag not set (P) (unimplemented)");
     return;
   }
 
-  if (!(buff->flag & MOB_FLAG_ACK_O)) {
+  if (!(ack_buff->flag & MOB_FLAG_ACK_O)) {
     printf("UDP IN : Flag not set (O) (unimplemented)");
     return;
   }
 
-  temp_len = MOB_LEN_ACK;
-  status = buff->status;
+  status = ack_buff->status;
   handoff = MOB_HANDOFF_NO_CHANGE;
+  temp_len = 0;
+  buff = &(ack_buff->options);
+  len -= MOB_LEN_ACK;
 
   while (temp_len<len) {
     switch(MOB_BUFF_OPT->type) {
@@ -243,7 +250,7 @@ mob_incoming_ack(uint8_t *buffer, int len) {
         printf("Not Implemented");
         break;
       default:
-        printf("Unknown stuff");
+        printf("Unknown stuff : %u, pos : %u, len : %u",MOB_BUFF_OPT->type,temp_len, MOB_BUFF_OPT->len+2);
         break;
     }
     temp_len += MOB_BUFF_OPT->len+2;

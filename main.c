@@ -33,19 +33,16 @@ main (int argc, char *argv[]) {
   char ip[] = "fc00::1";
   char publicip[] = "2001:660:5301:18:223:dfff:fe8d:4efc";
   uip_ipaddr_t ipaddr;
-  uip_ip6addr_t prefix;
+  uip_ip6addr_t prefix,privpref;
   rpl_dag_t *dag;
   uip_ds6_route_t *rep;
 
-  prefix.u8[0]=0xfc;
-  prefix.u8[1]=0x00;
-  prefix.u8[2]=0x00;
-  prefix.u8[3]=0x00;
-  prefix.u8[4]=0x00;
-  prefix.u8[5]=0x00;
-  prefix.u8[6]=0x00;
-  prefix.u8[7]=0x00;
+  memset(&prefix,0,sizeof(uip_ip6addr_t));
+  memset(&privpref,0,sizeof(uip_ip6addr_t));
 
+  prefix.u8[0]=0xfc;
+  privpref.u8[0]=0xfc;
+  privpref.u8[1]=0x01;
 
   signal(SIGINT, down);
 
@@ -79,6 +76,8 @@ main (int argc, char *argv[]) {
 
   perm_print();
   tun_create(id,ip);
+
+printf("aaaaaaa\n");
 //  perm_drop();
   perm_print();
 

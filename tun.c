@@ -89,23 +89,26 @@ ifconf(char *tundev, const char *ipaddr)
   int ret;
 
   sprintf(cmd,"ifconfig %s inet `hostname` up", tundev);
+  printf("%s\n",cmd);
   ret = system(cmd);
   if( ret < 0 ) {
     return ret;
   }
 
   sprintf(cmd,"ifconfig %s add %s", tundev, ipaddr);
+  printf("%s\n",cmd);
   ret = system(cmd);
   if( ret < 0 ) {
     return ret;
   }
   sprintf(cmd,"ip -6 route add %s/64 dev %s", ipaddr, tundev);
+  printf("%s\n",cmd);
   ret = system(cmd);
   return ret;
 }
 
 int
-tun_create(char *tundev, const char *ipaddr)
+tun_create(char *tundev, const char *ipaddr )
 {
   int ret;
   if(!perm_root_check()) {
@@ -115,10 +118,12 @@ tun_create(char *tundev, const char *ipaddr)
 
   ret=tun_alloc(tundev);
   if( ret < 0 ) {
+    printf("Tun alloc echec\n");
     return ret;
   }
 
   if(ifconf(tundev, ipaddr) < 0 ) {
+    printf("Tun ifconf echec\n");
     return -1;
   }
   return ret;

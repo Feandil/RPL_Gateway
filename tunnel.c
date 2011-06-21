@@ -51,14 +51,14 @@ tunnel_client_create(char *tuneldev, char *tundev, const char *ipaddr, struct so
     return ret;
   }
 
-  sprintf(cmd,"ip rule add iif %s table %s.%s", tundev, tuneldev, tundev);
+  sprintf(cmd,"ip -6 rule add unicast iif %s table %s.%s", tundev, tuneldev, tundev);
   printf("SH : %s\n",cmd);
   ret = system(cmd);
   if( ret < 0 ) {
     return ret;
   }
 
-  sprintf(cmd,"ip -6 route add default via %s table %s.%s", ip, tuneldev, tundev);
+  sprintf(cmd,"ip -6 route add default dev %s table %s.%s", tuneldev, tuneldev, tundev);
   printf("SH : %s\n",cmd);
   ret = system(cmd);
   if( ret < 0 ) {

@@ -36,7 +36,7 @@ main (int argc, char *argv[]) {
   char publicip[] = "2001:660:5301:18:4a5b:39ff:fe19:3bd5";
 //  char distantip[] = "2001:660:5301:18:223:dfff:fe8d:4efc";
   uip_ip6addr_t ipaddr;
-  uip_ip6addr_t prefix;
+  uip_ip6addr_t prefix,privpref;
   struct mob_new_lbr target;
 
   ipaddr.u8[0] = 0x20;
@@ -62,8 +62,11 @@ PRINT6ADDR(&target.addr);
 printf("\n");
 
   memset(&prefix,0,sizeof(uip_ip6addr_t));
+  memset(&privpref,0,sizeof(uip_ip6addr_t));
 
   prefix.u8[0]=0xfc;
+  privpref.u8[0]=0xfc;
+  privpref.u8[1]=0x01;
 
   signal(SIGINT, down);
 
