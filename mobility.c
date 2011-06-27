@@ -621,7 +621,7 @@ hoag_new_gw(mob_new_lbr *target)
     return;
   } else if(target->flags & MOB_FLAG_LBR_R) {
     if(gws[0].used == MOB_GW_KNOWN) {
-      if(equal(&gws[0].hoag_addr.sin6_addr,&target->addr) == 0) {
+      if(equal(&gws[0].hoag_addr.sin6_addr,&target->addr)) {
         return;
       } else {
         printf("ERROR : Changes of HOAG not supported yet");
@@ -633,7 +633,7 @@ hoag_new_gw(mob_new_lbr *target)
   } else if(target->flags & MOB_FLAG_LBR_S) {
     for(i = 1; i < MAX_LBR_BACKUP + 1; ++i) {
       if(gws[i].used == MOB_GW_KNOWN) {
-        if(equal(&gws[i].hoag_addr.sin6_addr,&target->addr) == 0) {
+        if(equal(&gws[i].hoag_addr.sin6_addr,&target->addr)) {
           return;
         }
       } else if(unused_elt == NULL) {
@@ -643,7 +643,7 @@ hoag_new_gw(mob_new_lbr *target)
   } else {
     for(i = MAX_LBR_BACKUP + 1; i < MAX_KNOWN_GATEWAY; ++i) {
       if(gws[i].used == MOB_GW_KNOWN) {
-        if(!equal(&gws[i].hoag_addr.sin6_addr,&target->addr) == 0 ) {
+        if(equal(&gws[i].hoag_addr.sin6_addr,&target->addr)) {
           return;
         }
       } else if(unused_elt == NULL) {
