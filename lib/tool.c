@@ -9,38 +9,7 @@ typedef struct ipv6_addr {
 
 int equal(struct in6_addr* a, uip_ip6addr_t* b)
 {
-  int i;
-  struct ipv6_addr *at = (ipv6_addr *)a;
-  struct ipv6_addr *bt = (ipv6_addr *)b;
-
-  for(i=0; i<4; ++i) {
-    if(ntohl(at->ip[i]) != bt->ip[i]) {
-      return 0;
-    }
-  }
-  return 1;
-}
-
-void convert(struct in6_addr* a, uip_ip6addr_t* b)
-{
-  int i;
-  struct ipv6_addr *at = (ipv6_addr *)a;
-  struct ipv6_addr *bt = (ipv6_addr *)b;
-
-  for(i=0; i<4; ++i) {
-    at->ip[i] = htonl(bt->ip[i]);
-  }
-}
-
-void convertback(struct in6_addr* a, uip_ip6addr_t* b)
-{
-  int i;
-  struct ipv6_addr *at = (ipv6_addr *)a;
-  struct ipv6_addr *bt = (ipv6_addr *)b;
-
-  for(i=0; i<4; ++i) {
-    bt->ip[i] = ntohl(at->ip[i]);
-  }
+  return memcmp(a,b,sizeof(uip_ip6addr_t));
 }
 
 void toString(uip_ipaddr_t* b, char* s)
