@@ -568,13 +568,15 @@ mob_new_node(uip_ds6_route_t *rep)
 {
   rep->state.seq = next_out_sequence;
   ++next_out_sequence;
-  if(!ev_is_active(next_send)) {
-    printf("Next send activated : %u\n",MOB_SEND_DELAY);
-    ev_timer_set(next_send, MOB_SEND_DELAY, 0);
-    ev_timer_start(event_loop, next_send);
-  } else if(next_send->repeat == MOB_SEND_TIMEOUT) {
-   next_send->repeat = MOB_SEND_DELAY;
-   ev_timer_again(event_loop,next_send);
+  if(mob_type & MOB_TYPE_UPWARD) {
+    if(!ev_is_active(next_send)) {
+      printf("Next send activated : %u\n",MOB_SEND_DELAY);
+      ev_timer_set(next_send, MOB_SEND_DELAY, 0);
+      ev_timer_start(event_loop, next_send);
+    } else if(next_send->repeat == MOB_SEND_TIMEOUT) {
+     next_send->repeat = MOB_SEND_DELAY;
+     ev_timer_again(event_loop,next_send);
+    }
   }
 }
 
