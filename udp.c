@@ -8,20 +8,12 @@
 
 #include "sys/perms.h"
 #include "sys/event.h"
-//#include "mob-action.h"
+#include "mobility.h"
 #include "tunnel.h"
 
 int tunnel_created;
 
 struct udp_io_t *udp_io;
-char *tdev;
-char *tldev;
-char *iaddr;
-
-
-void receive_udp(uint8_t *buffer, int read, struct sockaddr_in6 *addr, socklen_t addr_len);
-
-void udp_connected(struct sockaddr_in6 *addr, socklen_t addr_len, char* tldev, char* tdev, char *iaddr);
 
 void
 udp_readable_cb (struct ev_loop *loop, struct ev_io *w, int revents)
@@ -39,10 +31,6 @@ udp_readable_cb (struct ev_loop *loop, struct ev_io *w, int revents)
 
     udp_io->read = recvfrom(w->fd, &udp_io->buffer, UDP_BUFF_SIZE, 0, (struct sockaddr *) &udp_io->addr, &udp_io->addr_len);
 
-   if ((!tunnel_created) && (udp_io->addr.sin6_port !=0)) {
-      udp_connected(&udp_io->addr,udp_io->addr_len,tldev,tdev,iaddr);
-      tunnel_created = 1;
-    }
     if (udp_io->read > 1) {
       if (udp_io->read > 1280) {
         printf("UDP : Too large paquet\n");
@@ -56,12 +44,8 @@ udp_readable_cb (struct ev_loop *loop, struct ev_io *w, int revents)
 }
 
 int
-udp_init(int port, char *tuneldev, char *tundev, char *ipaddr)
+udp_init(int port)
 {
-  tdev=tundev;
-  tldev=tuneldev;
-  iaddr=ipaddr;
-
   if(!perm_root_check()) {
     printf("Please run this function as root\n");
     return -1;
@@ -115,3 +99,25 @@ udp_output(uint8_t *ptr, int size, struct sockaddr_in6 *addr)
   printf("udpout %i: %i\n",size,res);
 }
 
+struct sockaddr_in6*
+udp_output_d(uint8_t *ptr, int size, uip_ipaddr_t *ipaddr, int port)
+{
+  int res;
+  struct sockaddr_in6 *addr;
+  if((addr = (struct sockaddr_in6 *)malloc(sizeof(struct sockaddr_in6))) == NULL) {
+    printf("MALLOC ERROR");
+    return NULL;
+  }
+
+  addr->sin6_family = AF_INET6;
+
+  addr->sin6_port = htons(port);
+  addr->sin6_flowinfo = 0;
+  memcpy(&addr->sin6_addr, ipaddr, sizeof(struct in6_addr));
+  addr->sin6_scope_id = 0;
+
+  printf("%u,%u,%u,%u", addr->sin6_family, ntohs(addr->sin6_port), addr->sin6_flowinfo, addr->sin6_scope_id);
+  res=sendto(udp_io->fd,ptr,size,0,(struct sockaddr *)addr, sizeof(struct sockaddr_in6));
+  printf("udpout %i: %i\n",size,res);
+  return addr;
+}

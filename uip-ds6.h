@@ -187,7 +187,8 @@ typedef struct uip_ds6_maddr {
 /* Needed for the extended route entry state when using ContikiRPL */
 typedef struct rpl_route_entry {
   uint8_t learned_from;
-  uint8_t pushed;
+  uint16_t seq;
+  void *gw;
   void *dag;
   struct stimestamp lifetime;
   struct stimestamp hoag_lifetime;

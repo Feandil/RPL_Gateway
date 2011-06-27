@@ -3,21 +3,45 @@
 #include "main.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <unistd.h>
 
 #include "sys/perms.h"
 #include "ttyConnection.h"
 #include "sys/event.h"
 #include "uip6.h"
+#include "uiplib.h"
 #include "rpl/rpl.h"
-#include "mob-action.h"
+#include "mobility.h"
 #include "udp.h"
 #include "tunnel.h"
 #include "tun.h"
 
 void
-down(int sig) {
+print_help()
+{
+  printf("Usage : ");
+  printf("prog -p port -l lipv6 -t tundev -u tundev -P prefix -Q privprefix -i ip6 [-abr -c distant_ip6 -y ttydev]\n");
+  printf("\t-h : Print this message\n");
+  printf("\t-p port : Specify the port used for the routing protocol\n");
+  printf("\t-l lipv6 : Specify the local ipv6 address\n");
+  printf("\t-t tundev : Specify the base name for tunnel devices (tundevX)\n");
+  printf("\t-y ttydev : Specify the number of the ttyUSB that connect to the device (default : 0)\n");
+  printf("\t-u tundev : Specify the name of the tun used for the output of the ttydevice\n");
+  printf("\t-a : Use this node as the principal home agent\n");
+  printf("\t-b : Use this node as the backup home agent\n");
+  printf("\t-r : Use this node as a simple router \n");
+  printf("\t-c distant_ip6: connect to the specified ipv6\n");
+  printf("\t-P prefix: the prefix used for the inside of the 6LowPAN (Must be an ip, considered as a /64)\n");
+  printf("\t-Q privprefix: the private prefix used for the tun devices (Must be an ip, considered as a /64)\n");
+  printf("\t-i ip6: the ipv6 used for the virtual node. Must be inside prefix defined by -P\n");
+}
+
+void
+down(int sig)
+{
   printf("\ndie\n");
   event_stop();
   udp_close();
@@ -25,69 +49,180 @@ down(int sig) {
 }
 
 int
-main (int argc, char *argv[]) {
-
-  int port = 23423;
-  char id[] = "tun0";
-  char tun[] = "tunlbr";
-  char ip[] = "fc00::1";
-  char publicip[] = "2001:660:5301:18:223:dfff:fe8d:4efc";
-  uip_ipaddr_t ipaddr;
-  uip_ip6addr_t prefix,privpref;
+main (int argc, char *argv[])
+{
+  uint8_t state = 0;
+  int port = 0,
+      tty = 0;
+  char *tunhoag = NULL,
+       *tuntty = NULL,
+       *localip = NULL,
+       *publicip = NULL,
+       *prefix = NULL,
+       *privprefix = NULL,
+       *distantip = NULL;
+  uip_ipaddr_t ipaddr,
+               pref,
+               privpref,
+               distant,
+               local;
   rpl_dag_t *dag;
   uip_ds6_route_t *rep;
 
-  memset(&prefix,0,sizeof(uip_ip6addr_t));
-  memset(&privpref,0,sizeof(uip_ip6addr_t));
+  char opt_char=0;
+  while ((opt_char = getopt(argc, argv, "hp:l:t:y:u:abrc:P:Q:i:")) != -1) {
+    switch(opt_char) {
+      case 'h':
+        print_help();
+        return(0);
+        break;
+      case 'p':
+        port = atoi(optarg);
+        break;
+      case 'l':
+        publicip = optarg;
+        break;
+      case 't':
+        tunhoag = optarg;
+        break;
+      case 'y':
+        tty = atoi(optarg);
+        break;
+      case 'u':
+        tuntty = optarg;
+        break;
+      case 'a':
+        if(state == 0) {
+          state |= MOB_TYPE_STORE;
+          state |= MOB_TYPE_APPLY;
+        } else {
+          printf("a,b or r option are not supposed to be used at the same time");
+          return -1;
+        }
+        break;
+      case 'b':
+        if(state == 0) {
+          state |= MOB_TYPE_STORE;
+          state |= MOB_TYPE_UPWARD;
+        } else {
+          printf("a,b or r option are not supposed to be used at the same time");
+          return -1;
+        }
+        break;
+      case 'r':
+        if(state == 0) {
+          state |= MOB_TYPE_UPWARD;
+        } else {
+          printf("a,b or r option are not supposed to be used at the same time");
+          return -1;
+        }
+        break;
+      case 'c':
+        distantip = optarg;
+        break;
+      case 'P':
+        prefix = optarg;
+        break;
+      case 'Q':
+        privprefix = optarg;
+        break;
+      case 'i':
+        localip = optarg;
+        break;
+      default:
+        print_help();
+        return(0);
+        break;
+    }
+  }
 
-  prefix.u8[0]=0xfc;
-  privpref.u8[0]=0xfc;
-  privpref.u8[1]=0x01;
+  if(port == 0) {
+    printf("Error : port not set (use -p)\n");
+    return(-1);
+  }
+  if(publicip == NULL || !uiplib_ipaddrconv(publicip,&ipaddr)) {
+    printf("Error : local ipv6 address not set (use -l)\n");
+    return(-1);
+  }
+  if(tunhoag == NULL) {
+    printf("Error : base name for tunnel devices not set (use -t)\n");
+    return(-1);
+  }
+  /* tty : no verification */
+  if(tuntty == NULL) {
+    printf("Error : name for local tun for tty device not net\n");
+    return(-1);
+  }
+  if(state == 0) {
+    printf("error : null state\n");
+    return(-1);
+  }
+  if((!(state & MOB_TYPE_UPWARD)) && ((distantip == NULL) || !uiplib_ipaddrconv(distantip,&distant))) {
+    printf("Error : A principal Home agent MUST connect to a 6LBR in order to initialize the system\n");
+    return(-1);
+  }
+  if((prefix == NULL) || !uiplib_ipaddrconv(prefix,&pref)) {
+    printf("Error : The prefix MUST be set\n");
+    return(-1);
+  }
+  if((privprefix == NULL) || !uiplib_ipaddrconv(privprefix,&privpref)) {
+    printf("Error : The private prefix MUST be set\n");
+    return(-1);
+  }
+  if((localip == NULL) || !uiplib_ipaddrconv(localip,&local)) {
+    printf("Error : The ipv6 of the virtual node be set\n");
+    return(-1);
+  }
+
+  if(memcmp(&local,&pref,sizeof(uip_lladdr_t))) {
+    printf("The ipv6 of the virtual node is not defined inside the prefix\n");
+    return(-1);
+  }
 
   signal(SIGINT, down);
 
   event_init();
 
+
+/* Initialize internal node */
   uip_ds6_init();
   rpl_init();
-  mob_init();
 
-  memset(&ipaddr,0,16);
-  memcpy(&ipaddr,&prefix,8);
-  ipaddr.u8[15]=0x01;
-
-  rep = uip_ds6_route_add(&ipaddr, 128, &ipaddr, 0);
+  rep = uip_ds6_route_add(&local, 128, &local, 0);
   if (rep == NULL) {
     printf("Boot error");
     return -1;
   }
   rep->state.dag = NULL;
   rep->state.learned_from = RPL_ROUTE_FROM_INTERNAL;
-  rep->state.pushed = 1;
 
 
-  uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
+  uip_ds6_set_addr_iid(&local, &uip_lladdr);
   dag = rpl_set_root(0,&ipaddr);
   if(dag != NULL) {
-    rpl_set_prefix(dag, &prefix, 64);
+    rpl_set_prefix(dag, &pref, 64);
   }
-
 //  dag->preference=0xff;
 
-  perm_print();
-  tun_create(id,ip);
+/* Initialize Mobility routing protocol */
+//TODO
+  mob_init(state, port, &pref, &ipaddr, tunhoag);
 
-printf("aaaaaaa\n");
-//  perm_drop();
-  perm_print();
+  memcpy(&local,&privpref,sizeof(uip_lladdr_t));
 
-  init_ttyUSBX(0);
+/* Initialize connection with the node */
+  tun_create(tuntty,localip);
+  init_ttyUSBX(tty);
 
-  udp_init(port,tun,id,publicip);
+/* initialize UDP connection for mobility routing protocol */
+  udp_init(port);
 
+/* If we need to connect to an another node, do it */
+  if(!(state & MOB_TYPE_UPWARD)) {
+    hoag_init_lbr(&distant);
+  }
 
+/* Let's rock */
   event_launch();
-
-
   return 0;
 }

@@ -6,7 +6,7 @@
 #include "sys/event.h"
 #include <sys/socket.h>
 #include <netinet/in.h>
-//#include <linux/in6.h>
+#include "uip6.h"
 
 #define UDP_BUFF_SIZE 1500
 
@@ -19,8 +19,10 @@ typedef struct udp_io_t {
   int read;
 } udp_io_t;
 
-int udp_init(int port, char *tuneldev, char *tundev, char *ipaddr);
+int udp_init(int port);
 void udp_output(uint8_t *ptr, int size, struct sockaddr_in6 *addr);
+struct sockaddr_in6* udp_output_d(uint8_t *ptr, int size, uip_ipaddr_t *ipaddr, int port);
 void udp_close(void);
+
 
 #endif /* __UDP_H__ */
