@@ -146,8 +146,7 @@ hoag_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen
 
   for(i = 0; i < MAX_KNOWN_GATEWAY; ++i) {
     if(gws[i].used == MOB_GW_KNOWN) {
-      if(memcmp(&addr->sin6_addr,&gws[i].hoag_addr.sin6_addr,sizeof(struct in6_addr)) &&
-          addr->sin6_port == gws[i].hoag_addr.sin6_port) {
+      if(memcmp(&addr->sin6_addr,&gws[i].hoag_addr.sin6_addr,sizeof(struct in6_addr)) == 0) {
         nio = (uip_lladdr_t *)&gw;
         gw = i;
         break;
@@ -429,8 +428,7 @@ mob_incoming_ack(mob_bind_ack *buffer, int len, struct sockaddr_in6 *addr) {
 
   for(i = 0; i < MAX_LBR_BACKUP + 1; ++i) {
     if(gws[i].used == MOB_GW_KNOWN) {
-      if(memcmp(&addr->sin6_addr,&gws[i].hoag_addr.sin6_addr,sizeof(struct in6_addr)) &&
-          addr->sin6_port == gws[i].hoag_addr.sin6_port) {
+      if(memcmp(&addr->sin6_addr,&gws[i].hoag_addr.sin6_addr,sizeof(struct in6_addr)) == 0) {
         nio = (uip_lladdr_t *)&gw;
         gw = i;
         break;
