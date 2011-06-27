@@ -618,6 +618,7 @@ hoag_new_gw(mob_new_lbr *target)
 
   if(target->flags & MOB_FLAG_LBR_U) {
     mob_send_lbr(&target->addr, MOB_FLAG_LBR_Q);
+    return;
   } else if(target->flags & MOB_FLAG_LBR_R) {
     if(gws[0].used == MOB_GW_KNOWN) {
       if(equal(&gws[0].hoag_addr.sin6_addr,&target->addr) == 0) {
@@ -656,12 +657,12 @@ hoag_new_gw(mob_new_lbr *target)
     return;
   }
 
-  unused_elt->used = 1;
   output_buffer[0]='\n';
   output_buffer[1]='\0';
 
   tgt = udp_output_d(output_buffer, 1, &target->addr, port);
   if(tgt != NULL) {
+    unused_elt->used = MOB_GW_KNOWN;
     memcpy(&unused_elt->hoag_addr,tgt, sizeof(struct sockaddr_in6));
     udp_output(output_buffer, 1, &unused_elt->hoag_addr);
 
@@ -669,19 +670,9 @@ hoag_new_gw(mob_new_lbr *target)
         mob_type & MOB_TYPE_APPLY) {
       unused_elt->devnum = tunnelnum++;
       tunnel_server_create(tuneldev, unused_elt->devnum, &unused_elt->hoag_addr);
-     // convert(&unused_elt->hoag_addr.sin6_addr,&target->addr);
     }
   } else {
-    printf("ERROE\n");
-    printf("ERROE\n");
-    printf("ERROE\n");
-    printf("ERROE\n");
-    printf("ERROE\n");
-    printf("ERROE\n");
-    printf("ERROE\n");
-    printf("ERROE\n");
-    printf("ERROE\n");
-    printf("ERROE\n");
+    printf("ERROR\n");
   }
 }
 
