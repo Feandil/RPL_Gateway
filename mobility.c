@@ -531,8 +531,11 @@ mob_send_lbr(uip_ip6addr_t *lbr, uint8_t flag)
     if (mob_type & MOB_TYPE_STORE) {
       data->flags |= MOB_FLAG_LBR_S;
     }
+  printf("addr : ");
+  PRINT6ADDR(lbr);
+  printf("\n");
     memcpy(&data->addr,&myip,sizeof(uip_ip6addr_t));
-    udp_output_d(&output_buffer[0], hdr->len, (uip_ipaddr_t *)&lbr, port);
+    udp_output_d(&output_buffer[0], hdr->len + MOB_LEN_HDR, (uip_ipaddr_t *)lbr, port);
   }
 }
 

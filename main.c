@@ -173,7 +173,6 @@ main (int argc, char *argv[])
     printf("Error : The ipv6 of the virtual node be set\n");
     return(-1);
   }
-
   if(memcmp(&local,&pref,sizeof(uip_lladdr_t))) {
     printf("The ipv6 of the virtual node is not defined inside the prefix\n");
     return(-1);
@@ -205,7 +204,6 @@ main (int argc, char *argv[])
 //  dag->preference=0xff;
 
 /* Initialize Mobility routing protocol */
-//TODO
   mob_init(state, port, &pref, &ipaddr, tunhoag);
 
   memcpy(&local,&privpref,sizeof(uip_lladdr_t));
