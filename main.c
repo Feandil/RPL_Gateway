@@ -205,6 +205,7 @@ main (int argc, char *argv[])
 
 /* Initialize Mobility routing protocol */
   mob_init(state, port, &pref, &ipaddr, tunhoag);
+  tunnel_server_init(localip);
 
   memcpy(&local,&privpref,sizeof(uip_lladdr_t));
 

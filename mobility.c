@@ -531,9 +531,6 @@ mob_send_lbr(uip_ip6addr_t *lbr, uint8_t flag)
     if (mob_type & MOB_TYPE_STORE) {
       data->flags |= MOB_FLAG_LBR_S;
     }
-  printf("addr : ");
-  PRINT6ADDR(lbr);
-  printf("\n");
     memcpy(&data->addr,&myip,sizeof(uip_ip6addr_t));
     udp_output_d(&output_buffer[0], hdr->len + MOB_LEN_HDR, (uip_ipaddr_t *)lbr, port);
   }
@@ -614,6 +611,10 @@ hoag_new_gw(mob_new_lbr *target)
   char gw[128];
 
   toString(&target->addr,gw);
+
+  if(target->flags & MOB_FLAG_LBR_Q) {
+    mob_send_lbr(&target->addr,0);
+  }
 
   if(target->flags & MOB_FLAG_LBR_U) {
     mob_send_lbr(&target->addr, MOB_FLAG_LBR_Q);
@@ -746,11 +747,7 @@ receive_udp(uint8_t *buffer, int read, struct sockaddr_in6 *addr, socklen_t addr
       }
       break;
     case MOB_HR_NEW_G:
-      if(mob_type & MOB_TYPE_STORE) {
-        hoag_new_gw((mob_new_lbr*)&(buff->next));
-      } else {
-        printf("UDP IN : Bad message for 6LBR (New Gateway)\n");
-      }
+      hoag_new_gw((mob_new_lbr*)&(buff->next));
       break;
     default:
       printf("UDP IN : Bad message (Unknown : %u)",buff->mess);
