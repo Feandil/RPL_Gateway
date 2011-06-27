@@ -279,7 +279,7 @@ hoag_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen
 void
 mob_send_message(struct ev_loop *loop, struct ev_timer *w, int revents)
 {
-  int temp_len, i;
+  int temp_len, i, j;
   struct ext_hdr* hdr;
   struct mob_bind_up* data;
   uint8_t *buff;
@@ -328,11 +328,11 @@ mob_send_message(struct ev_loop *loop, struct ev_timer *w, int revents)
       }
       printf("Mob_up construction : ");
 
-      for(i=0;i<UIP_DS6_ROUTE_NB;++i) {
-        if(uip_ds6_routing_table[i].isused &&
-            uip_ds6_routing_table[i].length == IP6_LEN &&
-            uip_ds6_routing_table[i].state.learned_from == RPL_ROUTE_FROM_UNICAST_DAO &&
-            ((temp = uip_ds6_routing_table[i].state.seq - data->sequence) >= 0 &&
+      for(j=0;j<UIP_DS6_ROUTE_NB;++j) {
+        if(uip_ds6_routing_table[j].isused &&
+            uip_ds6_routing_table[j].length == IP6_LEN &&
+            uip_ds6_routing_table[j].state.learned_from == RPL_ROUTE_FROM_UNICAST_DAO &&
+            ((temp = uip_ds6_routing_table[j].state.seq - data->sequence) >= 0 &&
               temp < MOB_MAX_ENTRY_BY_UP)) {
           if (handoff_status == 0) {
 printf("Add Handoff (new) : %u \n",temp_len);
@@ -344,20 +344,20 @@ printf("Add Handoff (new) : %u \n",temp_len);
             handoff_status = MOB_HANDOFF_NEW_BINDING;
           }
 printf("Add NIO :  %u : ",temp_len);
-PRINT6ADDR(&uip_ds6_routing_table[i].ipaddr);
+PRINT6ADDR(&uip_ds6_routing_table[j].ipaddr);
           MOB_BUFF_NIO->type = MOB_OPT_NIO;
           MOB_BUFF_NIO->len = MOB_LEN_NIO - 2;
           MOB_BUFF_NIO->reserved = 0;
-          memcpy(&MOB_BUFF_NIO->addr, LLADDR_FROM_IPADDR(&uip_ds6_routing_table[i].ipaddr), sizeof(uip_lladdr_t));
+          memcpy(&MOB_BUFF_NIO->addr, LLADDR_FROM_IPADDR(&uip_ds6_routing_table[j].ipaddr), sizeof(uip_lladdr_t));
 printf(" : ");
 PRINTLLADDR(&MOB_BUFF_NIO->addr);
 printf("\n");
           temp_len += MOB_LEN_NIO;
         }
       }
-      for(i=0;i<MAX_DELETE_NIO;++i) {
-        if(deleted[i].used &&
-            ((temp = deleted[i].seq - data->sequence) >= 0 &&
+      for(j=0;j<MAX_DELETE_NIO;++j) {
+        if(deleted[j].used &&
+            ((temp = deleted[j].seq - data->sequence) >= 0 &&
               temp < MOB_MAX_ENTRY_BY_UP)) {
           if (handoff_status != MOB_HANDOFF_UNKNOWN) {
 printf("Add Handoff (unknown)\n");
@@ -372,7 +372,7 @@ printf("Del NIO\n");
           MOB_BUFF_NIO->type = MOB_OPT_NIO;
           MOB_BUFF_NIO->len = MOB_LEN_NIO - 2;
           MOB_BUFF_NIO->reserved = 0;
-          memcpy(&MOB_BUFF_NIO->addr, &deleted[i].addr, sizeof(uip_lladdr_t));
+          memcpy(&MOB_BUFF_NIO->addr, &deleted[j].addr, sizeof(uip_lladdr_t));
           temp_len += MOB_LEN_NIO;
         }
       }
@@ -637,7 +637,7 @@ hoag_new_gw(mob_new_lbr *target)
         if(equal(&gws[i].hoag_addr.sin6_addr,&target->addr) == 0) {
           return;
         }
-      } else {
+      } else if(unused_elt == NULL) {
         unused_elt = &gws[i];
       }
     }
@@ -671,10 +671,19 @@ hoag_new_gw(mob_new_lbr *target)
         mob_type & MOB_TYPE_APPLY) {
       unused_elt->devnum = tunnelnum++;
       tunnel_server_create(tuneldev, unused_elt->devnum, &unused_elt->hoag_addr);
-      convert(&unused_elt->hoag_addr.sin6_addr,&target->addr);
+     // convert(&unused_elt->hoag_addr.sin6_addr,&target->addr);
     }
   } else {
-    printf("ERROE");
+    printf("ERROE\n");
+    printf("ERROE\n");
+    printf("ERROE\n");
+    printf("ERROE\n");
+    printf("ERROE\n");
+    printf("ERROE\n");
+    printf("ERROE\n");
+    printf("ERROE\n");
+    printf("ERROE\n");
+    printf("ERROE\n");
   }
 }
 

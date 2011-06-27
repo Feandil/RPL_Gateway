@@ -11,6 +11,9 @@
 #include "mobility.h"
 #include "tunnel.h"
 
+#define DEBUG 1
+#include "uip-debug.h"
+
 int tunnel_created;
 
 struct udp_io_t *udp_io;
@@ -30,6 +33,10 @@ udp_readable_cb (struct ev_loop *loop, struct ev_io *w, int revents)
   if(revents & EV_READ) {
 
     udp_io->read = recvfrom(w->fd, &udp_io->buffer, UDP_BUFF_SIZE, 0, (struct sockaddr *) &udp_io->addr, &udp_io->addr_len);
+
+printf("read :");
+PRINT6ADDR((uip_ipaddr_t*)&udp_io->addr.sin6_addr);
+printf("\n");
 
     if (udp_io->read > 1) {
       if (udp_io->read > 1280) {
@@ -95,6 +102,9 @@ udp_output(uint8_t *ptr, int size, struct sockaddr_in6 *addr)
 
   printf("%u,%u,%u,%u", addr->sin6_family, ntohs(addr->sin6_port), addr->sin6_flowinfo, addr->sin6_scope_id);
 
+printf("OUT1 :");
+PRINT6ADDR((uip_ipaddr_t*)&addr->sin6_addr);
+printf("\n");
   res=sendto(udp_io->fd,ptr,size,0,(struct sockaddr *)addr, sizeof(struct sockaddr_in6));
   printf("udpout %i: %i\n",size,res);
 }
@@ -116,6 +126,9 @@ udp_output_d(uint8_t *ptr, int size, uip_ipaddr_t *ipaddr, int port)
   memcpy(&addr->sin6_addr, ipaddr, sizeof(struct in6_addr));
   addr->sin6_scope_id = 0;
 
+printf("OUT2 :");
+PRINT6ADDR((uip_ipaddr_t*)&addr->sin6_addr);
+printf("\n");
   printf("%u,%u,%u,%u", addr->sin6_family, ntohs(addr->sin6_port), addr->sin6_flowinfo, addr->sin6_scope_id);
   res=sendto(udp_io->fd,ptr,size,0,(struct sockaddr *)addr, sizeof(struct sockaddr_in6));
   printf("udpout %i: %i\n",size,res);
