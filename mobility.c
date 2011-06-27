@@ -43,7 +43,7 @@ change_route(int gw, char *command)
   if(mob_type & MOB_TYPE_APPLY) {
     char dest[128];
     toString(&prefix,dest);
-    sprintf(cmd,"ip -6 route %s %s dev %s%u", command, dest , tuneldev, gw);
+    sprintf(cmd,"ip -6 route %s %s dev %s%u", command, dest , tuneldev, gws[gw].devnum);
     printf("SH : %s\n",cmd);
     return system(cmd);
   } else {
