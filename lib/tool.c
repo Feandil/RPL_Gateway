@@ -9,7 +9,7 @@ typedef struct ipv6_addr {
 
 int equal(struct in6_addr* a, uip_ip6addr_t* b)
 {
-  return memcmp(a,b,sizeof(uip_ip6addr_t));
+  return memcmp(a,b,sizeof(uip_ip6addr_t)) == 0;
 }
 
 void toString(uip_ipaddr_t* b, char* s)
