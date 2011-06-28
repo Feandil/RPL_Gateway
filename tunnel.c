@@ -70,7 +70,7 @@ create_reroute(char *tuneldevbase, uint8_t tunneldev_int)
   printf("SH : %s\n",cmd);
   system(cmd);
 
-  sprintf(cmd,"ip -6 route add default dev %s.%u table %s", tuneldevbase, tunneldev_int, tablename);
+  sprintf(cmd,"ip -6 route add default dev %s%u table %s", tuneldevbase, tunneldev_int, tablename);
   printf("SH : %s\n",cmd);
   system(cmd);
 }

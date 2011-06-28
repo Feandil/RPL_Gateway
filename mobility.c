@@ -270,20 +270,18 @@ hoag_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen
     hoag_add_nio(nio,handoff,&(outbuff->options),&out_len,&out_status,&out_handoff,gw);
   }
 
-  if (out_len != 0) {
-    hdr->type = MOB_TYPE;
-    hdr->mess = MOB_HR_ACK;
-    hdr->len = out_len + MOB_LEN_ACK;
-    outbuff->status = 0;
-    outbuff->flag = 0;
-    outbuff->flag |= MOB_FLAG_ACK_P;
-    outbuff->flag |= MOB_FLAG_ACK_O;
-    outbuff->sequence = buffer->sequence;
-    outbuff->lifetime = 0;
+  hdr->type = MOB_TYPE;
+  hdr->mess = MOB_HR_ACK;
+  hdr->len = out_len + MOB_LEN_ACK;
+  outbuff->status = 0;
+  outbuff->flag = 0;
+  outbuff->flag |= MOB_FLAG_ACK_P;
+  outbuff->flag |= MOB_FLAG_ACK_O;
+  outbuff->sequence = buffer->sequence;
+  outbuff->lifetime = 0;
 
-    printf("send ack for seq %u from 6lbr %u\n", outbuff->sequence, gw);
-    udp_output(output_buffer,hdr->len + MOB_LEN_HDR, addr);
-  }
+  printf("send ack for seq %u from 6lbr %u\n", outbuff->sequence, gw);
+  udp_output(output_buffer,hdr->len + MOB_LEN_HDR, addr);
 }
 
 void

@@ -167,8 +167,8 @@ main (int argc, char *argv[])
     printf("error : null state\n");
     return(-1);
   }
-  if((!(state & MOB_TYPE_UPWARD)) && ((distantip == NULL) || !uiplib_ipaddrconv(distantip,&distant))) {
-    printf("Error : A principal Home agent MUST connect to a 6LBR in order to initialize the system\n");
+  if((distantip != NULL && !uiplib_ipaddrconv(distantip,&distant))) {
+    printf("Error : The 6LBR address used for connecting with the lln isn't valid\n");
     return(-1);
   }
   if((prefix == NULL) || !uiplib_ipaddrconv(prefix,&pref)) {
@@ -233,7 +233,7 @@ main (int argc, char *argv[])
   udp_init(port);
 
 /* If we need to connect to an another node, do it */
-  if(!(state & MOB_TYPE_UPWARD)) {
+  if(distantip != NULL) {
     hoag_init_lbr(&distant);
   }
 
