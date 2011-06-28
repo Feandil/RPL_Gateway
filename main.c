@@ -36,7 +36,7 @@ print_help()
   printf("\t-c distant_ip6: connect to the specified ipv6\n");
   printf("\t-P prefix: the prefix used for the inside of the 6LowPAN (Must be an ip, considered as a /64)\n");
   printf("\t-Q privprefix: the private prefix used for the tun devices (Must be an ip, considered as a /64)\n");
-  printf("\t-i ip6: the ipv6 used for the virtual node. Must be inside prefix defined by -P\n");
+  printf("\t-i ip6: the ipv6 used for the virtual node. Must be inside the private prefix defined by -Q\n");
 }
 
 void
@@ -45,7 +45,8 @@ down(int sig)
   printf("\ndie\n");
   event_stop();
   udp_close();
-  clear_tunnel();
+  hoag_close_tunnels();
+  tun_close();
 }
 
 int
@@ -173,8 +174,8 @@ main (int argc, char *argv[])
     printf("Error : The ipv6 of the virtual node be set\n");
     return(-1);
   }
-  if(memcmp(&local,&pref,sizeof(uip_lladdr_t))) {
-    printf("The ipv6 of the virtual node is not defined inside the prefix\n");
+  if(memcmp(&local,&privpref,sizeof(uip_lladdr_t))) {
+    printf("The ipv6 of the virtual node is not defined inside the private prefix\n");
     return(-1);
   }
 
@@ -204,10 +205,8 @@ main (int argc, char *argv[])
 //  dag->preference=0xff;
 
 /* Initialize Mobility routing protocol */
-  mob_init(state, port, &pref, &ipaddr, tunhoag);
+  mob_init(state, port, &pref, &ipaddr, tunhoag, tuntty);
   tunnel_server_init(publicip);
-
-  memcpy(&local,&privpref,sizeof(uip_lladdr_t));
 
 /* Initialize connection with the node */
   tun_create(tuntty,localip);

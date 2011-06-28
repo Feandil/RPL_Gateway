@@ -160,7 +160,8 @@ typedef struct uip_lladdr_list {
 } uip_lladdr_list;
 
 void receive_udp(uint8_t *buffer, int read, struct sockaddr_in6 *addr, socklen_t addr_len);
-int mob_init(uint8_t state, int p, uip_ipaddr_t *pre, uip_ipaddr_t *ip, char* devname);
+int mob_init(uint8_t state, int p, uip_ipaddr_t *pre, uip_ipaddr_t *ip, char* devname, char* ttydev);
 void hoag_init_lbr(uip_ip6addr_t *lbr);
+void hoag_close_tunnels(void);
 
 #endif /* __MOBILITY_H__ */

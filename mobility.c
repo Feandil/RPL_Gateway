@@ -22,6 +22,7 @@
 
 char cmd[512];
 char tuneldev[MAX_DEVNAME_SIZE];
+char ttydev[MAX_DEVNAME_SIZE];
 uint8_t mob_type;
 uint8_t tunnelnum;
 uint8_t output_buffer[1280];
@@ -49,6 +50,16 @@ change_route(int gw, char *command)
   } else {
     return 0;
   }
+}
+
+int
+change_local_route(char *command)
+{
+  char dest[128];
+  toString(&prefix,dest);
+  sprintf(cmd,"ip -6 route %s %s dev %s", command, dest , ttydev);
+  printf("SH : %s\n",cmd);
+  return system(cmd);
 }
 
 void
@@ -566,6 +577,8 @@ mob_new_node(uip_ds6_route_t *rep)
 {
   rep->state.seq = next_out_sequence;
   ++next_out_sequence;
+  memcpy(((uint8_t*)&prefix)+sizeof(uip_lladdr_t),((uint8_t*)&rep->ipaddr)+sizeof(uip_lladdr_t),sizeof(uip_lladdr_t));
+  change_local_route("add");
   if(mob_type & MOB_TYPE_UPWARD) {
     if(!ev_is_active(next_send)) {
       printf("Next send activated : %u\n",MOB_SEND_DELAY);
@@ -581,6 +594,8 @@ mob_new_node(uip_ds6_route_t *rep)
 void
 mob_lost_node(uip_ip6addr_t *lbr)
 {
+  memcpy(((uint8_t*)&prefix)+sizeof(uip_lladdr_t),((uint8_t*)lbr)+sizeof(uip_lladdr_t),sizeof(uip_lladdr_t));
+  change_local_route("add");
   if(mob_type & MOB_TYPE_UPWARD) {
     int i;
     for(i=0;i<MAX_DELETE_NIO;++i) {
@@ -756,7 +771,7 @@ receive_udp(uint8_t *buffer, int read, struct sockaddr_in6 *addr, socklen_t addr
 }
 
 int
-mob_init(uint8_t state, int p, uip_ipaddr_t *pre, uip_ipaddr_t *ip, char* devname)
+mob_init(uint8_t state, int p, uip_ipaddr_t *pre, uip_ipaddr_t *ip, char* devname, char* tuntty)
 {
   int i;
 
@@ -769,9 +784,8 @@ mob_init(uint8_t state, int p, uip_ipaddr_t *pre, uip_ipaddr_t *ip, char* devnam
       gws[i].used = MOB_GW_RESERVED;
     }
     ev_init(next_send,mob_send_message);
-  } else {
-    memcpy(&prefix,pre,sizeof(uip_ipaddr_t));
   }
+  memcpy(&prefix,pre,sizeof(uip_ipaddr_t));
   memcpy(&myip,ip,sizeof(uip_ipaddr_t));
 
   next_out_sequence = 1;
@@ -779,6 +793,7 @@ mob_init(uint8_t state, int p, uip_ipaddr_t *pre, uip_ipaddr_t *ip, char* devnam
 
   port = p;
   tunnelnum = 0;
+  strncpy(ttydev,tuntty,MAX_DEVNAME_SIZE-1);
   strncpy(tuneldev,devname,MAX_DEVNAME_SIZE-1);
   return 0;
 }

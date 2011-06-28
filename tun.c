@@ -17,6 +17,7 @@
 
 struct tun_io_t *tun_io;
 void rpl_remove_header(void);
+char cmd[128];
 
 void
 tun_readable_cb (struct ev_loop *loop, struct ev_io *w, int revents)
@@ -64,20 +65,25 @@ tun_alloc(char *dev)
   memset(&ifr, 0, sizeof(ifr));
 
   /* Flags: IFF_TUN   - TUN device (no Ethernet headers)
-   *        IFF_TAP   - TAP device
-   *
    *        IFF_NO_PI - Do not provide packet information
    */
   ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
-  if(*dev != 0)
+  if(*dev != 0) {
     strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+  } else {
+    close(tun_io->fd);
+    return -1;
+  }
 
   err = ioctl(tun_io->fd, TUNSETIFF, (void *) &ifr);
   if( err < 0 ) {
     close(tun_io->fd);
     return err;
   }
-  strcpy(dev, ifr.ifr_name);
+  if((tun_io->devname=(char*)malloc(strlen(ifr.ifr_name) + 1)) == NULL) {
+    return -1;
+  }
+  strcpy(tun_io->devname, ifr.ifr_name);
 
   ev_io_init (&tun_io->tun_ev, tun_readable_cb, tun_io->fd, EV_READ);
   ev_io_start(event_loop,&tun_io->tun_ev);
@@ -87,7 +93,6 @@ tun_alloc(char *dev)
 int
 ifconf(char *tundev, const char *ipaddr)
 {
-  char cmd[128];
   int ret;
 
   sprintf(cmd,"ifconfig %s inet `hostname` up", tundev);
@@ -100,13 +105,7 @@ ifconf(char *tundev, const char *ipaddr)
   sprintf(cmd,"ifconfig %s add %s", tundev, ipaddr);
   printf("%s\n",cmd);
   ret = system(cmd);
-  if( ret < 0 ) {
     return ret;
-  }
-  sprintf(cmd,"ip -6 route add %s/64 dev %s", ipaddr, tundev);
-  printf("%s\n",cmd);
-  ret = system(cmd);
-  return ret;
 }
 
 int
@@ -132,9 +131,24 @@ tun_create(char *tundev, const char *ipaddr )
 }
 
 void
-tun_output(uint8_t *ptr, int size) {
+tun_output(uint8_t *ptr, int size)
+{
   int res;
   res=write(tun_io->fd,ptr,size);
   printf("tunout %i: %i\n",size,res);
+}
+
+void
+tun_close(void)
+{
+  sprintf(cmd,"ip -6 route flush dev %s", tun_io->devname);
+  printf("%s\n",cmd);
+  system(cmd);
+
+  sprintf(cmd,"ifconfig %s down", tun_io->devname);
+  printf("%s\n",cmd);
+  system(cmd);
+
+  close(tun_io->fd);
 }
 
