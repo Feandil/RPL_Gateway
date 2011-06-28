@@ -618,12 +618,12 @@ hoag_new_gw(mob_new_lbr *target)
   toString(&target->addr,gw);
 
   if(target->flags & MOB_FLAG_LBR_Q) {
-    printf("send response 6LBR\n")
+    printf("send response 6LBR\n");
     mob_send_lbr(&target->addr,0);
   }
 
   if(target->flags & MOB_FLAG_LBR_U) {
-    printf("send unknown 6LBR\n")
+    printf("send unknown 6LBR\n");
     mob_send_lbr(&target->addr, MOB_FLAG_LBR_Q);
     return;
   } else if(target->flags & MOB_FLAG_LBR_R) {
