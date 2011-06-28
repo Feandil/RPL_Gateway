@@ -15,7 +15,7 @@ typedef struct tun_io_t {
   int read;
 } tun_io_t;
 
-int tun_create(char *tundev, const char *ipaddr);
+char* tun_create(char *tundev, const char *ipaddr);
 void tun_output(uint8_t *ptr, int size);
 void tun_close(void);
 

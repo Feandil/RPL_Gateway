@@ -5,8 +5,11 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-void tunnel_server_init(const char *ip);
-int tunnel_server_create(char *tuneldevbase, uint8_t tunneldev_int, struct sockaddr_in6 *addr);
+void tunnel_init(const char *ip, char* tundev, char* name, int num);
+int tunnel_create(char *tuneldevbase, uint8_t tunneldev_int, struct sockaddr_in6 *addr);
 void close_tunnel(char* dev, uint8_t i);
+
+void create_reroute(char *tuneldevbase, uint8_t tunneldev_int);
+void clear_reroute(void);
 
 #endif /* __TUN_H__ */

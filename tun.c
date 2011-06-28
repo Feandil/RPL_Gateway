@@ -46,20 +46,20 @@ tun_readable_cb (struct ev_loop *loop, struct ev_io *w, int revents)
   tun_io->read=0;
 }
 
-int
+char*
 tun_alloc(char *dev)
 {
   struct ifreq ifr;
   int err;
 
   if ((tun_io=(tun_io_t *)malloc(sizeof(struct tun_io_t)))==NULL)
-    return -1;
+    return NULL;
   memset(tun_io,0,sizeof(struct tun_io_t));
 
   tun_io->fd = open("/dev/net/tun", O_RDWR);
 
   if( tun_io->fd < 0 ) {
-    return -1;
+    return NULL;
   }
 
   memset(&ifr, 0, sizeof(ifr));
@@ -72,22 +72,22 @@ tun_alloc(char *dev)
     strncpy(ifr.ifr_name, dev, IFNAMSIZ);
   } else {
     close(tun_io->fd);
-    return -1;
+    return NULL;
   }
 
   err = ioctl(tun_io->fd, TUNSETIFF, (void *) &ifr);
   if( err < 0 ) {
     close(tun_io->fd);
-    return err;
+    return NULL;
   }
   if((tun_io->devname=(char*)malloc(strlen(ifr.ifr_name) + 1)) == NULL) {
-    return -1;
+    return NULL;
   }
   strcpy(tun_io->devname, ifr.ifr_name);
 
   ev_io_init (&tun_io->tun_ev, tun_readable_cb, tun_io->fd, EV_READ);
   ev_io_start(event_loop,&tun_io->tun_ev);
-  return 0;
+  return tun_io->devname;
 }
 
 int
@@ -108,24 +108,24 @@ ifconf(char *tundev, const char *ipaddr)
     return ret;
 }
 
-int
+char*
 tun_create(char *tundev, const char *ipaddr )
 {
-  int ret;
+  char* ret;
   if(!perm_root_check()) {
     printf("Please run this function as root\n");
-    return -1;
+    return NULL;
   }
 
   ret=tun_alloc(tundev);
   if( ret < 0 ) {
     printf("Tun alloc echec\n");
-    return ret;
+    return NULL;
   }
 
   if(ifconf(tundev, ipaddr) < 0 ) {
     printf("Tun ifconf echec\n");
-    return -1;
+    return NULL;
   }
   return ret;
 }

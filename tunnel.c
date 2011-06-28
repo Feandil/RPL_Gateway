@@ -4,19 +4,23 @@
 #include <stdlib.h>
 #include <string.h>
 
-char *tldev = NULL;
-char *tdev = NULL;
-
+char *tuntty = NULL;
+char *tablename = NULL;
+int tablenum = 0;
 const char *locipaddr;
+char cmd[1024];
 
 void
-tunnel_server_init(const char *ip)
+tunnel_init(const char *ip, char* tundev, char* name, int num)
 {
-  locipaddr=ip;
+  locipaddr = ip;
+  tablename = name;
+  tablenum = num;
+  tuntty = tundev;
 }
 
 int
-tunnel_server_create(char *tuneldevbase, uint8_t tunneldev_int, struct sockaddr_in6 *addr)
+tunnel_create(char *tuneldevbase, uint8_t tunneldev_int, struct sockaddr_in6 *addr)
 {
   char cmd[1024];
   char ip[128];
@@ -40,13 +44,6 @@ tunnel_server_create(char *tuneldevbase, uint8_t tunneldev_int, struct sockaddr_
   if( ret < 0 ) {
     return ret;
   }
-
-//  sprintf(cmd,"ip -6 route add %s dev %s%u", ip, tuneldevbase, tunneldev_int);
-//  printf("SH : %s\n",cmd);
-//  ret = system(cmd);
-//  if( ret < 0 ) {
-//    return ret;
-//  }
   return 0;
 }
 
@@ -60,3 +57,35 @@ close_tunnel(char* devbase, uint8_t i) {
   printf("SH : %s\n",cmd);
   system(cmd);
 }
+
+
+void
+create_reroute(char *tuneldevbase, uint8_t tunneldev_int)
+{
+  sprintf(cmd,"echo %u %s >> /etc/iproute2/rt_tables", tablenum, tablename);
+  printf("SH : %s\n",cmd);
+  system(cmd);
+
+  sprintf(cmd,"ip -6 rule add unicast iif %s table %s", tuntty, tablename);
+  printf("SH : %s\n",cmd);
+  system(cmd);
+
+  sprintf(cmd,"ip -6 route add default dev %s.%u table %s", tuneldevbase, tunneldev_int, tablename);
+  printf("SH : %s\n",cmd);
+  system(cmd);
+}
+
+void
+clear_reroute(void)
+{
+  sprintf(cmd,"ip -6 rule del unicast iif %s table %s", tuntty, tablename);
+  printf("SH : %s\n",cmd);
+  system(cmd);
+  sprintf(cmd,"ip -6 route flush table %s",tablename);
+  printf("SH : %s\n",cmd);
+  system(cmd);
+  sprintf(cmd,"sed -i -e /%u\\ %s/d /etc/iproute2/rt_tables", tablenum, tablename);
+  printf("SH : %s\n",cmd);
+  system(cmd);
+}
+

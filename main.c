@@ -23,7 +23,7 @@ void
 print_help()
 {
   printf("Usage : ");
-  printf("prog -p port -l lipv6 -t tundev -u tundev -P prefix -Q privprefix -i ip6 [-abr -c distant_ip6 -y ttydev]\n");
+  printf("prog -p port -l lipv6 -t tundev -u tundev -P prefix -Q privprefix -i ip6 -y ttydev [-abr] [-c distant_ip6 -T tablename -R tablenum]\n");
   printf("\t-h : Print this message\n");
   printf("\t-p port : Specify the port used for the routing protocol\n");
   printf("\t-l lipv6 : Specify the local ipv6 address\n");
@@ -33,10 +33,11 @@ print_help()
   printf("\t-a : Use this node as the principal home agent\n");
   printf("\t-b : Use this node as the backup home agent\n");
   printf("\t-r : Use this node as a simple router \n");
-  printf("\t-c distant_ip6: connect to the specified ipv6\n");
-  printf("\t-P prefix: the prefix used for the inside of the 6LowPAN (Must be an ip, considered as a /64)\n");
-  printf("\t-Q privprefix: the private prefix used for the tun devices (Must be an ip, considered as a /64)\n");
-  printf("\t-i ip6: the ipv6 used for the virtual node. Must be inside the private prefix defined by -Q\n");
+  printf("\t-c distant_ip6 : connect to the specified ipv6\n");
+  printf("\t-P prefix : the prefix used for the inside of the 6LowPAN (Must be an ip, considered as a /64)\n");
+  printf("\t-Q privprefix : the private prefix used for the tun devices (Must be an ip, considered as a /64)\n");
+  printf("\t-T tablename : name of iproute2 table used for outgoing traffic\n");
+  printf("\t-R tablenum : int designating the iproute2 table used for outgoing traffic\n");
 }
 
 void
@@ -54,14 +55,16 @@ main (int argc, char *argv[])
 {
   uint8_t state = 0;
   int port = 0,
-      tty = 0;
+      tty = 0,
+      tablenum = 0;
   char *tunhoag = NULL,
        *tuntty = NULL,
        *localip = NULL,
        *publicip = NULL,
        *prefix = NULL,
        *privprefix = NULL,
-       *distantip = NULL;
+       *distantip = NULL,
+       *tablename = NULL;
   uip_ipaddr_t ipaddr,
                pref,
                privpref,
@@ -71,7 +74,7 @@ main (int argc, char *argv[])
   uip_ds6_route_t *rep;
 
   char opt_char=0;
-  while ((opt_char = getopt(argc, argv, "hp:l:t:y:u:abrc:P:Q:i:")) != -1) {
+  while ((opt_char = getopt(argc, argv, "hp:l:t:y:u:abrc:P:Q:i:T:R:")) != -1) {
     switch(opt_char) {
       case 'h':
         print_help();
@@ -130,6 +133,12 @@ main (int argc, char *argv[])
       case 'i':
         localip = optarg;
         break;
+      case 'R':
+        tablenum = atoi(optarg);
+        break;
+      case 'T':
+        tablename = optarg;
+        break;
       default:
         print_help();
         return(0);
@@ -178,6 +187,9 @@ main (int argc, char *argv[])
     printf("The ipv6 of the virtual node is not defined inside the private prefix\n");
     return(-1);
   }
+  if(state & MOB_TYPE_UPWARD && (tablename == NULL || tablenum == 0)) {
+   printf("iproute2 table undefined");
+  }
 
   signal(SIGINT, down);
 
@@ -206,11 +218,16 @@ main (int argc, char *argv[])
 
 /* Initialize Mobility routing protocol */
   mob_init(state, port, &pref, &ipaddr, tunhoag, tuntty);
-  tunnel_server_init(publicip);
 
 /* Initialize connection with the node */
-  tun_create(tuntty,localip);
+  tuntty=tun_create(tuntty,localip);
+  if(tuntty == NULL) {
+    return -1;
+  }
   init_ttyUSBX(tty);
+
+/* Tunnels initialisation */
+  tunnel_init(publicip,tuntty,tablename,tablenum);
 
 /* initialize UDP connection for mobility routing protocol */
   udp_init(port);

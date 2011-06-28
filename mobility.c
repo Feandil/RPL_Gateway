@@ -684,7 +684,10 @@ hoag_new_gw(mob_new_lbr *target)
     if(target->flags & MOB_FLAG_LBR_R ||
         mob_type & MOB_TYPE_APPLY) {
       unused_elt->devnum = tunnelnum++;
-      tunnel_server_create(tuneldev, unused_elt->devnum, &unused_elt->hoag_addr);
+      tunnel_create(tuneldev, unused_elt->devnum, &unused_elt->hoag_addr);
+    }
+    if(target->flags & MOB_FLAG_LBR_R) {
+      create_reroute(tuneldev, unused_elt->devnum);
     }
   } else {
     printf("ERROR\n");
@@ -701,6 +704,9 @@ void
 hoag_delete_gw(int gw)
 {
   gws[gw].used = 0;
+  if(gw == 0) {
+    clear_reroute();
+  }
   close_tunnel(tuneldev,gws[gw].devnum);
 }
 
