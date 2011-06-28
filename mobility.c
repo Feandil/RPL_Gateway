@@ -553,19 +553,11 @@ mob_new_6lbr(uip_ipaddr_t *lbr)
       return;
     }
   }
-/*  for(i=0;i<MAX_KNOWN_GATEWAY;++i) {
-    if(!gws[i].used) {
-      gws[i].used = 1;
-      convert(&gws[i].hoag_addr.sin6_addr, &lbr);
-      &gws[i].hoag_addr.sin6_family = AF_INET6;
-      &gws[i].hoag_addr.sin6_port = htons(port);
-      memcpy(&gws[i].hoag_addr,lbr,sizeof(uip_ip6addr_t));
-      mob_send_lbr(lbr,MOB_FLAG_LBR_U);
-      return;
-    }
+  for(i=0;i<15;++i) {
+  printf("Receiving new 6LBR : ");
+  PRINT6ADDR(lbr);
+  printf("\n");
   }
-  printf("MOB : BUFFER OVERFLOW");
-*/
   mob_send_lbr(lbr,MOB_FLAG_LBR_U);
 }
 
@@ -626,10 +618,12 @@ hoag_new_gw(mob_new_lbr *target)
   toString(&target->addr,gw);
 
   if(target->flags & MOB_FLAG_LBR_Q) {
+    printf("send response 6LBR\n")
     mob_send_lbr(&target->addr,0);
   }
 
   if(target->flags & MOB_FLAG_LBR_U) {
+    printf("send unknown 6LBR\n")
     mob_send_lbr(&target->addr, MOB_FLAG_LBR_Q);
     return;
   } else if(target->flags & MOB_FLAG_LBR_R) {

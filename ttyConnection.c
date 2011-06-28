@@ -57,7 +57,7 @@ static void handle_input(slip_io_t *slip_io)
       }
       break;
     default:
-      printf("[TTY-IN] ");
+/*      printf("[TTY-IN] ");
       for (j=slip_io->buffer_start;j<slip_io->buffer_end;++j) {
         printf("%c",slip_io->buffer[j]);
         if((slip_io->buffer[j] == '\n'
@@ -69,7 +69,7 @@ static void handle_input(slip_io_t *slip_io)
             && slip_io->buffer[j] != '\n') {
           printf("\n");
         }
-      }
+      } */
       break;
   }
   slip_io->buffer_end=0;
@@ -144,7 +144,7 @@ tty_readable_cb (struct ev_loop *loop, struct ev_io *w, int revents)
               slip_io->state=STATE_OK;
               break;
             default:
-              printf("%c",slip_io->temp[i]);
+//              printf("%c",slip_io->temp[i]);
               break;
           }
           break;
