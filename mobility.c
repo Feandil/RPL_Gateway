@@ -553,12 +553,11 @@ mob_new_6lbr(uip_ipaddr_t *lbr)
       return;
     }
   }
-  for(i=0;i<15;++i) {
-  printf("Receiving new 6LBR : ");
-  PRINT6ADDR(lbr);
-  printf("\n");
+  if(mob_type & MOB_TYPE_UPWARD) {
+    mob_send_lbr(lbr,MOB_FLAG_LBR_U);
+  } else {
+    mob_send_lbr(lbr,MOB_FLAG_LBR_Q);
   }
-  mob_send_lbr(lbr,MOB_FLAG_LBR_U);
 }
 
 
@@ -567,8 +566,10 @@ mob_new_node(uip_ds6_route_t *rep)
 {
   rep->state.seq = next_out_sequence;
   ++next_out_sequence;
+
   memcpy(((uint8_t*)&prefix)+sizeof(uip_lladdr_t),((uint8_t*)&rep->ipaddr)+sizeof(uip_lladdr_t),sizeof(uip_lladdr_t));
   change_local_route("add");
+
   if(mob_type & MOB_TYPE_UPWARD) {
     if(!ev_is_active(next_send)) {
       printf("Next send activated : %u\n",MOB_SEND_DELAY);
