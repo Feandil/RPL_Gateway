@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "uip6.h"
 #include "uip-ds6.h"
+#include <arpa/inet.h>
 
 typedef struct ext_hdr {
   uint8_t type;
@@ -135,22 +136,23 @@ typedef struct mob_opt_timestamp {
 
 #define MOB_STATUS_ERR_FLAG 0x80
 
-#define IP6_LEN  128
+#define IP6_LEN              128
 #define MAX_DEVNAME_SIZE     10
 #define MAX_DEVNAME_NUM_SIZE 3
-#define MAX_KNOWN_GATEWAY 15
-#define MAX_DELETE_NIO 30
-#define MAX_LBR_BACKUP 2
+#define MAX_KNOWN_GATEWAY    15
+#define MAX_DELETE_NIO       30
+#define MAX_LBR_BACKUP       2
+#define MAX_NON_ACK          4
 
-#define MOB_SEND_DELAY   2
-#define MOB_SEND_TIMEOUT 10
+#define MOB_SEND_DELAY       2
+#define MOB_SEND_TIMEOUT     10
 
 typedef struct gw_list {
   uint16_t sequence_out;
-//  uint16_t sequence_in;
+  uint8_t non_ack;
   uint8_t used;
   uint8_t devnum;
-  struct sockaddr_in6 hoag_addr;
+  struct sockaddr_in6 addr;
 } gw_list;
 
 typedef struct uip_lladdr_list {
@@ -161,7 +163,7 @@ typedef struct uip_lladdr_list {
 
 void receive_udp(uint8_t *buffer, int read, struct sockaddr_in6 *addr, socklen_t addr_len);
 int mob_init(uint8_t state, int p, uip_ipaddr_t *pre, uip_ipaddr_t *ip, char* devname, char* ttydev);
-void hoag_init_lbr(uip_ip6addr_t *lbr);
-void hoag_close_tunnels(void);
+void mob_init_lbr(uip_ip6addr_t *lbr);
+void mob_close_tunnels(void);
 
 #endif /* __MOBILITY_H__ */

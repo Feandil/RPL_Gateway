@@ -38,7 +38,8 @@ clean:
 	rmdir obj/rpl
 	rmdir obj/sys
 	rmdir obj
+	rm -f prog
 
 obj/%.co: %.c $(SOURCES_H)
-	gcc -Wall -g -O -I. -MMD -c $< -o $@
+	gcc -Wall -Wno-unused-result -g -O -I. -MMD -c $< -o $@
 	

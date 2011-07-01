@@ -46,7 +46,7 @@ down(int sig)
   printf("\ndie\n");
   event_stop();
   udp_close();
-  hoag_close_tunnels();
+  mob_close_tunnels();
   tun_close();
 }
 
@@ -234,7 +234,7 @@ main (int argc, char *argv[])
 
 /* If we need to connect to an another node, do it */
   if(distantip != NULL) {
-    hoag_init_lbr(&distant);
+    mob_init_lbr(&distant);
   }
 
 /* Let's rock */

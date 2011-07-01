@@ -44,7 +44,7 @@
 #include "uip-debug.h"
 
 void mob_new_6lbr(uip_ip6addr_t *lbr);
-void mob_new_node(uip_ds6_route_t *rep);
+void mob_maj_node(uip_ds6_route_t *rep);
 
 /*---------------------------------------------------------------------------*/
 #define RPL_DIO_GROUNDED                 0x80
@@ -344,7 +344,7 @@ dao_input(void)
     return;
   } else {
     stimestamp_set(&rep->state.lifetime, lifetime * instance->lifetime_unit);
-    mob_new_node(rep);
+    mob_maj_node(rep);
   }
 
   if(learned_from == RPL_ROUTE_FROM_UNICAST_DAO) {

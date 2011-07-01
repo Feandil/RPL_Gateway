@@ -1,8 +1,9 @@
+#include "mobility.h"
+#include "mobility-priv.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <arpa/inet.h>
-#include "mobility.h"
 #include "sys/event.h"
 #include "lib/tool.h"
 #include "udp.h"
@@ -39,7 +40,7 @@ struct gw_list *hoag_pri, *hoag_bk;
 extern uip_ds6_route_t uip_ds6_routing_table[];
 
 int
-change_route(int gw, char *command)
+change_route(uint8_t gw, char *command)
 {
   if(mob_type & MOB_TYPE_APPLY) {
     char dest[128];
@@ -63,7 +64,7 @@ change_local_route(char *command)
 }
 
 void
-hoag_add_nio(uip_lladdr_t *nio, uint8_t handoff, uint8_t *buff, int *t_len, uint8_t *out_status, uint8_t *out_handoff, uint8_t gw)
+mob_add_nio(uip_lladdr_t *nio, uint8_t handoff, uint8_t *buff, int *t_len, uint8_t *out_status, uint8_t *out_handoff, uint8_t gw)
 {
   uint8_t status = 0;
   int temp_len = *t_len;
@@ -90,7 +91,7 @@ hoag_add_nio(uip_lladdr_t *nio, uint8_t handoff, uint8_t *buff, int *t_len, uint
     {
       if((mob_type & MOB_TYPE_APPLY)
           && (locroute != uip_ds6_routing_table + UIP_DS6_ROUTE_NB)) {
-        if(locroute->state.gw != &gw) {
+        if(locroute->state.gw != gw) {
           printf("ERROR : NIO was deleted by the wrong 6LBR\n");
         } else {
           change_route(gw, "del");
@@ -102,9 +103,9 @@ hoag_add_nio(uip_lladdr_t *nio, uint8_t handoff, uint8_t *buff, int *t_len, uint
     default:
     {
       if(locroute != uip_ds6_routing_table + UIP_DS6_ROUTE_NB) {
-        if(locroute->state.gw != &gw) {
+        if(locroute->state.gw != gw) {
           change_route(gw, "change");
-          locroute->state.gw = &gw;
+          locroute->state.gw = gw;
         }
       } else {
         if(change_route(gw, "add") < 0) {
@@ -114,7 +115,7 @@ hoag_add_nio(uip_lladdr_t *nio, uint8_t handoff, uint8_t *buff, int *t_len, uint
         locroute = uip_ds6_route_add(&prefix, IP6_LEN, &prefix, 0); /* TODO : change this 0 to pref */
         if(locroute != NULL) {
           locroute->state.learned_from = RPL_ROUTE_FROM_6LBR;
-          locroute->state.gw = &gw;
+          locroute->state.gw = gw;
         } else {
           change_route(gw, "del");
 //          status = MOB_STATUS_ERR_FLAG;
@@ -144,7 +145,7 @@ hoag_add_nio(uip_lladdr_t *nio, uint8_t handoff, uint8_t *buff, int *t_len, uint
 }
 
 void
-hoag_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen_t addr_len)
+mob_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen_t addr_len)
 {
   uint8_t handoff, out_handoff, out_status, *buff;
   int temp_len,out_len,i;
@@ -157,7 +158,7 @@ hoag_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen
 
   for(i = 0; i < MAX_KNOWN_GATEWAY; ++i) {
     if(gws[i].used == MOB_GW_KNOWN) {
-      if(memcmp(&addr->sin6_addr,&gws[i].hoag_addr.sin6_addr,sizeof(struct in6_addr)) == 0) {
+      if(memcmp(&addr->sin6_addr,&gws[i].addr.sin6_addr,sizeof(struct in6_addr)) == 0) {
         nio = (uip_lladdr_t *)&gw;
         gw = i;
         break;
@@ -233,7 +234,7 @@ hoag_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen
     switch(MOB_BUFF_OPT->type) {
       case MOB_OPT_PREFIX:
         if(nio != NULL) {
-          hoag_add_nio(nio,handoff,&(outbuff->options),&out_len,&out_status,&out_handoff,gw);
+          mob_add_nio(nio,handoff,&(outbuff->options),&out_len,&out_status,&out_handoff,gw);
           nio = NULL;
         }
         handoff = MOB_HANDOFF_NO_CHANGE;
@@ -241,7 +242,7 @@ hoag_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen
         break;
       case MOB_OPT_PREF:
         if(nio != NULL) {
-          hoag_add_nio(nio,handoff,&(outbuff->options),&out_len,&out_status,&out_handoff,gw);
+          mob_add_nio(nio,handoff,&(outbuff->options),&out_len,&out_status,&out_handoff,gw);
           nio = NULL;
         }
         handoff = MOB_BUFF_PREF->hi;
@@ -252,7 +253,7 @@ hoag_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen
         PRINTLLADDR(&MOB_BUFF_NIO->addr);
         printf("\n");
         if(nio != NULL) {
-          hoag_add_nio(nio,handoff,&(outbuff->options),&out_len,&out_status,&out_handoff,gw);
+          mob_add_nio(nio,handoff,&(outbuff->options),&out_len,&out_status,&out_handoff,gw);
         }
         nio = &MOB_BUFF_NIO->addr;
         break;
@@ -267,7 +268,7 @@ hoag_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen
   }
 
   if(nio != NULL) {
-    hoag_add_nio(nio,handoff,&(outbuff->options),&out_len,&out_status,&out_handoff,gw);
+    mob_add_nio(nio,handoff,&(outbuff->options),&out_len,&out_status,&out_handoff,gw);
   }
 
   hdr->type = MOB_TYPE;
@@ -329,6 +330,10 @@ mob_send_message(struct ev_loop *loop, struct ev_timer *w, int revents)
   for(i=0; i <= MAX_LBR_BACKUP + 1; ++i) {
     if(gws[i].used == MOB_GW_KNOWN &&
        ( next_out_sequence - gws[i].sequence_out > 1)) {
+      if(!(gws[i].non_ack < MAX_NON_ACK)) {
+         mob_delete_gw(i);
+         break;
+      }
       if(next_out_sequence - gws[i].sequence_out > MOB_MAX_ENTRY_BY_UP + 1) {
         data->sequence = gws[i].sequence_out + MOB_MAX_ENTRY_BY_UP;
       } else {
@@ -389,7 +394,8 @@ printf("End position : %u\n",temp_len);
       if(temp_len != 0) {
         hdr->len = temp_len + MOB_LEN_BIND;
         printf("Send Update for seq %u from 6lbr %u\n", data->sequence, i);
-        udp_output(output_buffer,hdr->len + MOB_LEN_HDR, &gws[i].hoag_addr);
+        udp_output(output_buffer,hdr->len + MOB_LEN_HDR, &gws[i].addr);
+        ++gws[i].non_ack;
         sent = 1;
       }
     }
@@ -401,8 +407,8 @@ printf("End position : %u\n",temp_len);
 }
 
 inline void
-mob_incoming_ack(mob_bind_ack *buffer, int len, struct sockaddr_in6 *addr) {
-
+mob_incoming_ack(mob_bind_ack *buffer, int len, struct sockaddr_in6 *addr)
+{
   uint8_t gw;
   int i;
   struct uip_lladdr_t *nio;
@@ -437,7 +443,7 @@ mob_incoming_ack(mob_bind_ack *buffer, int len, struct sockaddr_in6 *addr) {
 
   for(i = 0; i < MAX_LBR_BACKUP + 1; ++i) {
     if(gws[i].used == MOB_GW_KNOWN) {
-      if(memcmp(&addr->sin6_addr,&gws[i].hoag_addr.sin6_addr,sizeof(struct in6_addr)) == 0) {
+      if(memcmp(&addr->sin6_addr,&gws[i].addr.sin6_addr,sizeof(struct in6_addr)) == 0) {
         nio = (uip_lladdr_t *)&gw;
         gw = i;
         break;
@@ -451,7 +457,9 @@ mob_incoming_ack(mob_bind_ack *buffer, int len, struct sockaddr_in6 *addr) {
   }
 
   gws[gw].sequence_out = buffer->sequence;
+  gws[gw].non_ack = 0;
   printf("Ack for sequence %u received from 6LBR %u", gws[gw].sequence_out, gw);
+
 /*
   status = ack_buff->status;
   handoff = MOB_HANDOFF_NO_CHANGE;
@@ -527,7 +535,7 @@ mob_send_lbr(uip_ip6addr_t *lbr, uint8_t flag)
     memcpy(&data->addr,lbr,sizeof(uip_ip6addr_t));
     for(i = 0; i < MAX_LBR_BACKUP + 1 ; ++i) {
       if(gws[i].used == MOB_GW_KNOWN) {
-        udp_output(&output_buffer[0],hdr->len + MOB_LEN_HDR, &gws[i].hoag_addr);
+        udp_output(&output_buffer[0],hdr->len + MOB_LEN_HDR, &gws[i].addr);
       }
     }
   } else {
@@ -549,11 +557,11 @@ mob_new_6lbr(uip_ipaddr_t *lbr)
   int i;
   for(i=0;i<MAX_KNOWN_GATEWAY;++i) {
     if(gws[i].used == MOB_GW_KNOWN &&
-        equal(&gws[i].hoag_addr.sin6_addr, lbr)) {
+        equal(&gws[i].addr.sin6_addr, lbr)) {
       return;
     }
   }
-  if(mob_type & MOB_TYPE_UPWARD) {
+  if(mob_type & MOB_TYPE_UPWARD && gws[0].used == MOB_GW_KNOWN) {
     mob_send_lbr(lbr,MOB_FLAG_LBR_U);
   } else {
     mob_send_lbr(lbr,MOB_FLAG_LBR_Q);
@@ -564,11 +572,15 @@ mob_new_6lbr(uip_ipaddr_t *lbr)
 void
 mob_new_node(uip_ds6_route_t *rep)
 {
-  rep->state.seq = next_out_sequence;
-  ++next_out_sequence;
-
   memcpy(((uint8_t*)&prefix)+sizeof(uip_lladdr_t),((uint8_t*)&rep->ipaddr)+sizeof(uip_lladdr_t),sizeof(uip_lladdr_t));
   change_local_route("add");
+}
+
+void
+mob_maj_node(uip_ds6_route_t *rep)
+{
+  rep->state.seq = next_out_sequence;
+  ++next_out_sequence;
 
   if(mob_type & MOB_TYPE_UPWARD) {
     if(!ev_is_active(next_send)) {
@@ -586,7 +598,8 @@ void
 mob_lost_node(uip_ip6addr_t *lbr)
 {
   memcpy(((uint8_t*)&prefix)+sizeof(uip_lladdr_t),((uint8_t*)lbr)+sizeof(uip_lladdr_t),sizeof(uip_lladdr_t));
-  change_local_route("add");
+  change_local_route("remove");
+
   if(mob_type & MOB_TYPE_UPWARD) {
     int i;
     for(i=0;i<MAX_DELETE_NIO;++i) {
@@ -609,7 +622,7 @@ mob_lost_node(uip_ip6addr_t *lbr)
 }
 
 void
-hoag_new_gw(mob_new_lbr *target)
+mob_new_gw(mob_new_lbr *target)
 {
   int i;
   struct sockaddr_in6* tgt;
@@ -629,10 +642,10 @@ hoag_new_gw(mob_new_lbr *target)
     return;
   } else if(target->flags & MOB_FLAG_LBR_R) {
     if(gws[0].used == MOB_GW_KNOWN) {
-      if(equal(&gws[0].hoag_addr.sin6_addr,&target->addr)) {
+      if(equal(&gws[0].addr.sin6_addr,&target->addr)) {
         return;
       } else {
-        printf("ERROR : Changes of HOAG not supported yet");
+        printf("ERROR : Multi-HoAg not supported yet");
         return;
       }
     } else {
@@ -641,7 +654,7 @@ hoag_new_gw(mob_new_lbr *target)
   } else if(target->flags & MOB_FLAG_LBR_S) {
     for(i = 1; i < MAX_LBR_BACKUP + 1; ++i) {
       if(gws[i].used == MOB_GW_KNOWN) {
-        if(equal(&gws[i].hoag_addr.sin6_addr,&target->addr)) {
+        if(equal(&gws[i].addr.sin6_addr,&target->addr)) {
           return;
         }
       } else if(unused_elt == NULL) {
@@ -651,7 +664,7 @@ hoag_new_gw(mob_new_lbr *target)
   } else {
     for(i = MAX_LBR_BACKUP + 1; i < MAX_KNOWN_GATEWAY; ++i) {
       if(gws[i].used == MOB_GW_KNOWN) {
-        if(equal(&gws[i].hoag_addr.sin6_addr,&target->addr)) {
+        if(equal(&gws[i].addr.sin6_addr,&target->addr)) {
           return;
         }
       } else if(unused_elt == NULL) {
@@ -665,58 +678,94 @@ hoag_new_gw(mob_new_lbr *target)
     return;
   }
 
+  for(i = 0; i < MAX_KNOWN_GATEWAY; ++i) {
+    if(gws[i].used == MOB_GW_KNOWN) {
+      if(equal(&gws[i].addr.sin6_addr,&target->addr)) {
+        mob_lbr_evolve(i, unused_elt, target->flags);
+        return;
+      }
+    }
+  }
+
   output_buffer[0]='\n';
   output_buffer[1]='\0';
 
   tgt = udp_output_d(output_buffer, 1, &target->addr, port);
   if(tgt != NULL) {
+    memset(unused_elt,0,sizeof(gw_list));
     unused_elt->used = MOB_GW_KNOWN;
-    memcpy(&unused_elt->hoag_addr,tgt, sizeof(struct sockaddr_in6));
-    udp_output(output_buffer, 1, &unused_elt->hoag_addr);
+    memcpy(&unused_elt->addr,tgt, sizeof(struct sockaddr_in6));
+    udp_output(output_buffer, 1, &unused_elt->addr);
 
-    if(target->flags & MOB_FLAG_LBR_R ||
-        mob_type & MOB_TYPE_APPLY) {
+    if(mob_type & MOB_TYPE_APPLY) {
       unused_elt->devnum = tunnelnum++;
-      tunnel_create(tuneldev, unused_elt->devnum, &unused_elt->hoag_addr);
+      tunnel_create(tuneldev, unused_elt->devnum, &unused_elt->addr);
     }
-    if(target->flags & MOB_FLAG_LBR_R) {
-      create_reroute(tuneldev, unused_elt->devnum);
-    }
+
+    mob_lbr_evolve_state(unused_elt, target->flags, 0);
   } else {
     printf("ERROR\n");
   }
 }
 
 void
-hoag_init_lbr(uip_ip6addr_t *lbr)
+mob_init_lbr(uip_ip6addr_t *lbr)
 {
     mob_send_lbr(lbr, MOB_FLAG_LBR_Q);
 }
 
 void
-hoag_delete_gw(int gw)
+clean_routes(uint8_t gw)
 {
-  gws[gw].used = 0;
-  if(gw == 0) {
-    clear_reroute();
+  uip_ds6_route_t *locroute;
+
+  for(locroute = uip_ds6_routing_table;
+      locroute < uip_ds6_routing_table + UIP_DS6_ROUTE_NB;
+      locroute++) {
+    if(locroute->isused) {
+      if(locroute->state.learned_from == RPL_ROUTE_FROM_6LBR
+          && (locroute->state.gw = gw)) {
+        change_route(gw, "del");
+        uip_ds6_route_rm(locroute);
+      }
+    }
   }
-  close_tunnel(tuneldev,gws[gw].devnum);
 }
 
 void
-hoag_close_tunnels(void)
+mob_delete_gw(uint8_t gw)
+{
+  gws[gw].used = 0;
+  if(mob_type & MOB_TYPE_STORE) {
+    clean_routes(gw);
+  }
+  if((mob_type & MOB_TYPE_UPWARD) &&
+      (gw == 0)) {
+    clear_reroute();
+  }
+  if(mob_type & MOB_TYPE_APPLY) {
+    close_tunnel(tuneldev,gws[gw].devnum);
+  }
+  if(gw < MAX_LBR_BACKUP) {
+    gws[gw].used = MOB_GW_RESERVED;
+  }
+}
+
+void
+mob_close_tunnels(void)
 {
   int i;
 
-  if(mob_type & MOB_TYPE_APPLY) {
-    for(i = 0; i < MAX_LBR_BACKUP +1; ++i) {
+  if((mob_type & MOB_TYPE_APPLY) ||
+      (mob_type & MOB_TYPE_STORE)) {
+    for(i = 0; i < MAX_KNOWN_GATEWAY; ++i) {
       if(gws[i].used == MOB_GW_KNOWN) {
-        hoag_delete_gw(i);
+        mob_delete_gw(i);
       }
     }
   } else {
     if(gws[0].used == MOB_GW_KNOWN) {
-      hoag_delete_gw(0);
+      mob_delete_gw(0);
     }
   }
 }
@@ -748,7 +797,7 @@ receive_udp(uint8_t *buffer, int read, struct sockaddr_in6 *addr, socklen_t addr
   switch(buff->mess) {
     case MOB_HR_UPDATE:
       if(mob_type & MOB_TYPE_STORE) {
-        hoag_proceed_up((mob_bind_up*)&(buff->next), buff->len, addr, addr_len);
+        mob_proceed_up((mob_bind_up*)&(buff->next), buff->len, addr, addr_len);
       } else {
         printf("UDP IN : Bad message for 6LBR (Binding Update)\n");
       }
@@ -761,7 +810,7 @@ receive_udp(uint8_t *buffer, int read, struct sockaddr_in6 *addr, socklen_t addr
       }
       break;
     case MOB_HR_NEW_G:
-      hoag_new_gw((mob_new_lbr*)&(buff->next));
+      mob_new_gw((mob_new_lbr*)&(buff->next));
       break;
     default:
       printf("UDP IN : Bad message (Unknown : %u)",buff->mess);
@@ -794,6 +843,121 @@ mob_init(uint8_t state, int p, uip_ipaddr_t *pre, uip_ipaddr_t *ip, char* devnam
   tunnelnum = 0;
   strncpy(ttydev,tuntty,MAX_DEVNAME_SIZE-1);
   strncpy(tuneldev,devname,MAX_DEVNAME_SIZE-1);
+  return 0;
+}
+
+void mob_lbr_evolve(uint8_t old_gw, gw_list *new_gw_p, uint8_t new_state)
+{
+  uip_ds6_route_t *locroute;
+  uint8_t new_gw_i = (uint8_t)(new_gw_p - &gws[0]);
+
+  memmove(new_gw_p, &gws[old_gw], sizeof(gw_list));
+  memset(&gws[old_gw],0,sizeof(gw_list));
+  if(old_gw < MAX_LBR_BACKUP) {
+    gws[old_gw].used = MOB_GW_RESERVED;
+  }
+  if(mob_type & MOB_TYPE_STORE) {
+    for(locroute = uip_ds6_routing_table;
+        locroute < uip_ds6_routing_table + UIP_DS6_ROUTE_NB;
+        locroute++) {
+      if(locroute->isused
+          && locroute->state.learned_from == RPL_ROUTE_FROM_6LBR
+          && (locroute->state.gw = old_gw)) {
+        locroute->state.gw = new_gw_i;
+      }
+    }
+  }
+  if(old_gw == 0) {
+    mob_lbr_evolve_state(new_gw_p, new_state, MOB_FLAG_LBR_R | MOB_FLAG_LBR_S);
+  } else if(old_gw < MAX_LBR_BACKUP + 1) {
+    mob_lbr_evolve_state(new_gw_p, new_state, MOB_FLAG_LBR_S);
+  } else {
+    mob_lbr_evolve_state(new_gw_p, new_state, 0);
+  }
+}
+
+
+void mob_lbr_evolve_state(gw_list *gw, uint8_t new_state, uint8_t old_state)
+{
+  if((mob_type & MOB_TYPE_UPWARD)
+      && (new_state & MOB_FLAG_LBR_R)
+      && (!(old_state & MOB_FLAG_LBR_R))) {
+    gw->devnum = tunnelnum++;
+    tunnel_create(tuneldev, gw->devnum, &gw->addr);
+    create_reroute(tuneldev, gw->devnum);
+  }
+  if((new_state ^ old_state) & MOB_FLAG_LBR_S) {
+    gw->sequence_out = min_out_sequence;
+  }
+  if((new_state & MOB_FLAG_LBR_S)
+      && (mob_type & MOB_TYPE_UPWARD)) {
+    if(!ev_is_active(next_send)) {
+      printf("Next send activated : %u\n",MOB_SEND_DELAY);
+      ev_timer_set(next_send, MOB_SEND_DELAY, 0);
+      ev_timer_start(event_loop, next_send);
+    }
+  }
+}
+
+/*
+*/
+
+int mob_state_evolve(uint8_t new_state)
+{
+  int i;
+  uip_ds6_route_t *locroute;
+
+  if((new_state & MOB_TYPE_APPLY)
+      && (new_state & MOB_TYPE_UPWARD)) {
+    printf("ERROR : MOB_TYPE_APPLY and MOB_TYPE_UPWARD uncompatibles\n");
+    return 3;
+  }
+  if(mob_type & MOB_TYPE_APPLY) {
+    if(!(new_state& MOB_TYPE_APPLY)) {
+      for(i=1; i < MAX_KNOWN_GATEWAY; ++i) {
+        close_tunnel(tuneldev,gws[i].devnum);
+        gws[i].devnum = 0;
+      }
+    } else if(new_state& MOB_TYPE_APPLY) {
+      for(i=1; i < MAX_KNOWN_GATEWAY; ++i) {
+        gws[i].devnum = tunnelnum++;
+        tunnel_create(tuneldev, gws[i].devnum, &gws[i].addr);
+      }
+      for(locroute = uip_ds6_routing_table;
+          locroute < uip_ds6_routing_table + UIP_DS6_ROUTE_NB;
+          locroute++) {
+        if(locroute->isused
+            && locroute->state.learned_from == RPL_ROUTE_FROM_6LBR) {
+          memcpy(((uint8_t*)&prefix)+sizeof(uip_lladdr_t), &locroute->ipaddr, sizeof(uip_lladdr_t));
+          change_route(locroute->state.gw, "add");
+        }
+      }
+    }
+  }
+
+  if(mob_type & MOB_TYPE_STORE) {
+    if(!(new_state& MOB_TYPE_STORE)) {
+      
+    } else if(new_state& MOB_TYPE_STORE) {
+      
+    }
+  }
+
+  if(mob_type & MOB_TYPE_UPWARD) {
+    if(!(new_state& MOB_TYPE_UPWARD)) {
+      if(gws[0].used == MOB_GW_KNOWN) {
+        clear_reroute();
+      }
+      ev_timer_stop(event_loop,next_send);
+      free(next_send);
+      next_send = NULL;
+    } else if(new_state& MOB_TYPE_UPWARD) {
+      if((next_send = (ev_timer*) malloc(sizeof(ev_timer))) == NULL) {
+        return 2;
+      }
+      ev_init(next_send,mob_send_message);
+    }
+  }
   return 0;
 }
 

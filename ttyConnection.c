@@ -12,13 +12,19 @@
 #include "uip6.h"
 #include "tcpip.h"
 
+#define DEBUG 0
+
 unsigned char *slipend;
 struct slip_io_t *slip_io;
 
 static void handle_input(slip_io_t *slip_io)
 {
   unsigned char temp[64];
-  int j,res;
+  int res;
+
+#if DEBUG
+  int j;
+#endif
 
   switch(slip_io->buffer[slip_io->buffer_start]) {
     case '!':
@@ -57,7 +63,8 @@ static void handle_input(slip_io_t *slip_io)
       }
       break;
     default:
-/*      printf("[TTY-IN] ");
+#if DEBUG
+      printf("[TTY-IN] ");
       for (j=slip_io->buffer_start;j<slip_io->buffer_end;++j) {
         printf("%c",slip_io->buffer[j]);
         if((slip_io->buffer[j] == '\n'
@@ -69,7 +76,8 @@ static void handle_input(slip_io_t *slip_io)
             && slip_io->buffer[j] != '\n') {
           printf("\n");
         }
-      } */
+      }
+#endif
       break;
   }
   slip_io->buffer_end=0;

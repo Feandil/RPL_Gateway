@@ -44,6 +44,8 @@
 /************************************************************************/
 extern uip_ds6_route_t uip_ds6_routing_table[UIP_DS6_ROUTE_NB];
 
+void mob_new_node(uip_ds6_route_t *rep);
+
 #define UIP_IP_BUF                          ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
 #define UIP_EXT_BUF                        ((struct uip_ext_hdr *)&uip_buf[uip_l2_l3_hdr_len])
 #define UIP_HBHO_BUF                      ((struct uip_hbho_hdr *)&uip_buf[uip_l2_l3_hdr_len])
@@ -94,6 +96,7 @@ rpl_add_route(rpl_dag_t *dag, uip_ipaddr_t *prefix, int prefix_len,
       PRINTF("RPL: No space for more route entries\n");
       return NULL;
     }
+     mob_new_node(rep);
   } else {
     PRINTF("RPL: Updated the next hop for prefix ");
     PRINT6ADDR(prefix);
