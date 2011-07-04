@@ -12,7 +12,7 @@
 #include "uip6.h"
 #include "tcpip.h"
 
-#define DEBUG 0
+#define DEBUG 1
 
 unsigned char *slipend;
 struct slip_io_t *slip_io;

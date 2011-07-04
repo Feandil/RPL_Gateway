@@ -732,7 +732,7 @@ mob_new_gw(mob_new_lbr *target)
     mob_lbr_evolve_state(unused_elt, target->flags, 0);
 
     for(i = 0; i < MAX_KNOWN_GATEWAY; ++i) {
-      if(gws[i].used == MOB_GW_KNOWN) {
+      if(gws[i].used == MOB_GW_KNOWN && unused_elt != &gws[i]) {
         mob_send_lbr((uip_ip6addr_t *)&gws[i].addr.sin6_addr,MOB_FLAG_LBR_U);
       }
     }
@@ -775,6 +775,7 @@ mob_delete_gw(uint8_t gw)
   if((mob_type & MOB_TYPE_UPWARD) &&
       (gw == 0)) {
     clear_reroute();
+    close_tunnel(tuneldev,gws[gw].devnum);
   }
   if(mob_type & MOB_TYPE_APPLY) {
     close_tunnel(tuneldev,gws[gw].devnum);
@@ -791,8 +792,10 @@ mob_close_tunnels(void)
 
   if((mob_type & MOB_TYPE_APPLY) ||
       (mob_type & MOB_TYPE_STORE)) {
+printf("mobapply\n");
     for(i = 0; i < MAX_KNOWN_GATEWAY; ++i) {
       if(gws[i].used == MOB_GW_KNOWN) {
+        printf("delete : %u\n",i);
         mob_delete_gw(i);
       }
     }
@@ -1013,6 +1016,8 @@ int mob_state_evolve(uint8_t new_state)
       mob_send_lbr((uip_ipaddr_t*)&gws[i].addr.sin6_addr,0);
     }
   }
+
+  mob_type = new_state;
   return 0;
 }
 
