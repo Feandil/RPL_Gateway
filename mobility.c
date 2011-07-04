@@ -758,6 +758,7 @@ clean_routes(uint8_t gw)
     if(locroute->isused) {
       if(locroute->state.learned_from == RPL_ROUTE_FROM_6LBR
           && (locroute->state.gw = gw)) {
+        memcpy(((uint8_t*)&prefix)+sizeof(uip_lladdr_t), &locroute->ipaddr, sizeof(uip_lladdr_t));
         change_route(gw, "del");
         uip_ds6_route_rm(locroute);
       }
