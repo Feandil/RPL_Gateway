@@ -191,7 +191,8 @@ typedef struct rpl_route_entry {
   uint16_t seq;
   void *dag;
   struct stimestamp lifetime;
-//  struct stimestamp hoag_lifetime;
+  uint16_t next_seq;
+  uint16_t prev_seq;
 } rpl_route_entry_t;
 
 int rpl_route_clean(rpl_route_entry_t *state);

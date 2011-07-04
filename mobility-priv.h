@@ -27,4 +27,9 @@ void mob_lbr_evolve(uint8_t old_gw, gw_list *new_gw, uint8_t new_state);
 void mob_lbr_evolve_state(gw_list *gw, uint8_t new_state, uint8_t old_state);
 int mob_state_evole(uint8_t new_state);
 
+void mob_list_add_end(uip_ds6_route_t *rep);
+void mob_list_remove(uip_ds6_route_t *rep);
+void mob_update_min_ack(uint16_t new_ack);
+
+
 #endif /* __MOBILITY_PRIVATE_H__ */

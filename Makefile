@@ -1,7 +1,7 @@
 all: prog
 
 SOURCES_C = tcpip.c  uip6.c  uip-debug.c  uip-ds6.c  uip-icmp6.c  ttyConnection.c  tun.c  udp.c  tunnel.c  uiplib.c
-SOURCES_H = conf.h  tcpip.h  uip6.h  uip_arch.h  uip-debug.h  uip-ds6.h  uip-icmp6.h  uipopt.h  ttyConnection.h  tun.h  main.h  udp.h  mobility.h  tunnel.h  uiplib.h
+SOURCES_H = conf.h  tcpip.h  uip6.h  uip_arch.h  uip-debug.h  uip-ds6.h  uip-icmp6.h  uipopt.h  ttyConnection.h  tun.h  main.h  udp.h  mobility.h  tunnel.h  uiplib.h  mobility-priv.h
 EXTERN_LIB = 
 
 include rpl/Makefile

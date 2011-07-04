@@ -45,6 +45,7 @@
 extern uip_ds6_route_t uip_ds6_routing_table[UIP_DS6_ROUTE_NB];
 
 void mob_new_node(uip_ds6_route_t *rep);
+void mob_lost_node(uip_ip6addr_t *lbr);
 
 #define UIP_IP_BUF                          ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
 #define UIP_EXT_BUF                        ((struct uip_ext_hdr *)&uip_buf[uip_l2_l3_hdr_len])
@@ -62,6 +63,7 @@ rpl_remove_routes(rpl_dag_t *dag)
 
   for(i = 0; i < UIP_DS6_ROUTE_NB; i++) {
     if(uip_ds6_routing_table[i].state.dag == dag) {
+      mob_lost_node(&uip_ds6_routing_table[i].ipaddr);
       uip_ds6_route_rm(&uip_ds6_routing_table[i]);
     }
   }

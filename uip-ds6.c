@@ -57,6 +57,8 @@ static uip_ds6_route_t *locroute;
 /* uint8_t used in this file */
 static uint8_t loc_loop_state;
 
+void mob_lost_node(uip_ip6addr_t *lbr);
+
 /*---------------------------------------------------------------------------*/
 void
 uip_ds6_init(void)
@@ -437,6 +439,8 @@ uip_ds6_route_lookup(uip_ipaddr_t *destipaddr)
       case RPL_ROUTE_FROM_DIO:
         if(UIP_DS6_ROUTE_STATE_CLEAN(&locrt->state)) {
           uip_ds6_route_rm(locrt);
+          //TODO : verify that the prefix len is 128
+          mob_lost_node(&locrt->ipaddr);
           PRINTF("DS6: Route timeout\n");
           return NULL;
         }
@@ -506,7 +510,6 @@ uip_ds6_route_add(uip_ipaddr_t *ipaddr, uint8_t length, uip_ipaddr_t *nexthop,
 
   return locroute;
 }
-
 /*---------------------------------------------------------------------------*/
 void
 uip_ds6_route_rm(uip_ds6_route_t *route)
