@@ -145,6 +145,7 @@ typedef struct mob_opt_timestamp {
 #define MAX_NON_ACK          4
 
 #define MOB_LIST_END         UINT16_MAX
+#define MOB_LIST_INIT        UINT16_MAX-1
 
 #define MOB_SEND_DELAY       2
 #define MOB_SEND_TIMEOUT     10

@@ -12,6 +12,8 @@
 #define DEBUG 1
 #include "uip-debug.h"
 
+#define HARDDEBUG 0
+
 #define MOB_BUFF_OPT                    ((mob_opt *)(((uint8_t*)buff) + temp_len))
 #define MOB_BUFF_PREFIX          ((mob_opt_prefix *)(((uint8_t*)buff) + temp_len))
 #define MOB_BUFF_STATUS          ((mob_opt_status *)(((uint8_t*)buff) + temp_len))
@@ -299,6 +301,9 @@ mob_send_message(struct ev_loop *loop, struct ev_timer *w, int revents)
   uint8_t handoff_status;
   uint16_t pos;
   uint8_t sent;
+#if HARDDEBUG
+uip_ds6_route_t *locroute;
+#endif /* HARDDEBUG*/
 
   if(gws[0].used != MOB_GW_KNOWN) {
     w->repeat = MOB_SEND_DELAY;
@@ -330,6 +335,25 @@ mob_send_message(struct ev_loop *loop, struct ev_timer *w, int revents)
   handoff_status = 0;
 
   sent = 0;
+
+#if HARDDEBUG
+printf("Current min/max : %u/%u",min_out_seq,max_out_seq);
+   for(locroute = uip_ds6_routing_table;
+          locroute < uip_ds6_routing_table + UIP_DS6_ROUTE_NB;
+          locroute++) {
+        printf("route %u : ",(uint16_t)(locroute - uip_ds6_routing_table));
+        if(locroute->isused
+            && locroute->state.learned_from == RPL_ROUTE_FROM_UNICAST_DAO) {
+          printf("used : seq = %u, addr = ",locroute->state.seq);
+          PRINT6ADDR(&locroute->ipaddr);
+          printf(" prev : %u, next : %u\n",locroute->state.prev_seq,locroute->state.next_seq);
+        } else {
+          printf("unused\n");
+        }
+      }
+printf("Current min/max : %u/%u",min_out_seq,max_out_seq);
+#endif /* HARDDEBUG*/
+
 
   for(i=0; i <= MAX_LBR_BACKUP + 1; ++i) {
     if(gws[i].used == MOB_GW_KNOWN &&
@@ -598,12 +622,13 @@ mob_new_node(uip_ds6_route_t *rep)
 {
   memcpy(((uint8_t*)&prefix)+sizeof(uip_lladdr_t),((uint8_t*)&rep->ipaddr)+sizeof(uip_lladdr_t),sizeof(uip_lladdr_t));
   change_local_route("add");
+  mob_list_init(rep);
 }
 
 void
 mob_maj_node(uip_ds6_route_t *rep)
 {
-  mob_list_add_end(rep);
+  mob_list_maj(rep);
   rep->state.seq = next_out_sequence;
   ++next_out_sequence;
 
@@ -661,6 +686,7 @@ mob_new_gw(mob_new_lbr *target)
     for(i = 0; i < MAX_KNOWN_GATEWAY; ++i) {
       if(gws[i].used == MOB_GW_KNOWN) {
         if(equal(&gws[i].addr.sin6_addr,&target->addr)) {
+          printf("Known gateway, forget\n");
           return;
         }
       }
@@ -847,6 +873,7 @@ receive_udp(uint8_t *buffer, int read, struct sockaddr_in6 *addr, socklen_t addr
       }
       break;
     case MOB_HR_NEW_G:
+      printf("UDP IN : NEW GW\n");
       mob_new_gw((mob_new_lbr*)&(buff->next));
       break;
     default:
@@ -918,6 +945,8 @@ void mob_lbr_evolve(uint8_t old_gw, gw_list *new_gw_p, uint8_t new_state)
 
 void mob_lbr_evolve_state(gw_list *gw, uint8_t new_state, uint8_t old_state)
 {
+  printf("LBR evolution : %u to %u\n",old_state,new_state);
+
   if((mob_type & MOB_TYPE_UPWARD)
       && (new_state & MOB_FLAG_LBR_R)
       && (!(old_state & MOB_FLAG_LBR_R))) {
@@ -925,9 +954,11 @@ void mob_lbr_evolve_state(gw_list *gw, uint8_t new_state, uint8_t old_state)
     tunnel_create(tuneldev, gw->devnum, &gw->addr);
     create_reroute(tuneldev, gw->devnum);
   }
+  printf("previous seq : %u \n",gw->sequence_out);
   if((new_state ^ old_state) & MOB_FLAG_LBR_S) {
     min_ack_sequence = (gw->sequence_out = uip_ds6_routing_table[min_out_seq].state.seq);
   }
+  printf("New seq : %u \n",gw->sequence_out);
   if((new_state & MOB_FLAG_LBR_S)
       && (mob_type & MOB_TYPE_UPWARD)) {
     if(!ev_is_active(next_send)) {
@@ -1078,4 +1109,20 @@ mob_update_min_ack(uint16_t new_ack)
   } else {
     min_ack_sequence = next_out_sequence -1;
   }
+}
+
+void
+mob_list_init(uip_ds6_route_t *rep)
+{
+  rep->state.prev_seq = MOB_LIST_INIT;
+  rep->state.next_seq = MOB_LIST_INIT;
+}
+
+void
+mob_list_maj(uip_ds6_route_t *rep)
+{
+  if(rep->state.prev_seq != MOB_LIST_INIT) {
+    mob_list_remove(rep);
+  }
+  mob_list_add_end(rep);
 }

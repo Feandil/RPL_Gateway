@@ -30,6 +30,7 @@ int mob_state_evole(uint8_t new_state);
 void mob_list_add_end(uip_ds6_route_t *rep);
 void mob_list_remove(uip_ds6_route_t *rep);
 void mob_update_min_ack(uint16_t new_ack);
-
+void mob_list_init(uip_ds6_route_t *rep);
+void mob_list_maj(uip_ds6_route_t *rep);
 
 #endif /* __MOBILITY_PRIVATE_H__ */
