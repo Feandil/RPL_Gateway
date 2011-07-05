@@ -371,6 +371,11 @@ printf("Current min/max : %u/%u",min_out_seq,max_out_seq);
 
       pos = min_out_seq;
       while(pos != MOB_LIST_END
+          && UINT_LESS_THAN(gws[i].sequence_out, uip_ds6_routing_table[pos].state.seq + 1)) {
+        pos = uip_ds6_routing_table[pos].state.next_seq;
+      }
+
+      while(pos != MOB_LIST_END
           && UINT_LESS_THAN(uip_ds6_routing_table[pos].state.seq, data->sequence + 1)) {
         if (handoff_status == 0) {
 printf("Add Handoff (new) : %u \n",temp_len);
@@ -954,10 +959,14 @@ void mob_lbr_evolve_state(gw_list *gw, uint8_t new_state, uint8_t old_state)
     tunnel_create(tuneldev, gw->devnum, &gw->addr);
     create_reroute(tuneldev, gw->devnum);
   }
-  printf("previous seq : %u \n",gw->sequence_out);
+  printf("previous seq : %u (%u)\n",gw->sequence_out,min_out_seq);
   if((new_state ^ old_state) & MOB_FLAG_LBR_S) {
-    min_ack_sequence = (gw->sequence_out = uip_ds6_routing_table[min_out_seq].state.seq);
-  }
+    if(min_out_seq != MOB_LIST_END) {
+      min_ack_sequence = (gw->sequence_out = uip_ds6_routing_table[min_out_seq].state.seq - 1);
+    } else {
+      gw->sequence_out = min_ack_sequence;
+    }
+ }
   printf("New seq : %u \n",gw->sequence_out);
   if((new_state & MOB_FLAG_LBR_S)
       && (mob_type & MOB_TYPE_UPWARD)) {
