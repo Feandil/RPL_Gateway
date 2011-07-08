@@ -1,3 +1,4 @@
+
 #include "ttyConnection.h"
 
 #include <fcntl.h>
@@ -15,6 +16,9 @@
 #define DEBUG 1
 
 unsigned char *slipend;
+unsigned char *slipesc;
+unsigned char *slipescend;
+unsigned char *slipescesc;
 struct slip_io_t *slip_io;
 
 static void handle_input(slip_io_t *slip_io)
@@ -178,6 +182,21 @@ init_ttyUSBX(const int X)
     } else {
       *slipend=SLIP_END;
     }
+    if ((slipesc = (unsigned char *)malloc(sizeof(unsigned char))) == NULL) {
+      return -1;
+    } else {
+      *slipesc=SLIP_ESC;
+    }
+    if ((slipescend = (unsigned char *)malloc(sizeof(unsigned char))) == NULL) {
+      return -1;
+    } else {
+      *slipescend=SLIP_ESC_END;
+    }
+    if ((slipescesc = (unsigned char *)malloc(sizeof(unsigned char))) == NULL) {
+      return -1;
+    } else {
+      *slipescesc=SLIP_ESC_END;
+    }
   }
 
   if ((slip_io=(slip_io_t *)malloc(sizeof(struct slip_io_t)))==NULL)
@@ -223,7 +242,32 @@ init_ttyUSBX(const int X)
 
 void
 tty_output(uint8_t *ptr, int size) {
-  int res;
-  res=write(slip_io->fd,ptr,size);
+  int res, pos;
+  pos = 0;
+  printf("TTY start : %u/%u\n", pos, size);
+  while(pos<size) {
+    while(pos < size
+        && (ptr[pos] != *slipend)
+        && (ptr[pos] != *slipesc)) {
+      ++ pos;
+    }
+    res=write(slip_io->fd,ptr,pos);
+    printf("TTY pause : %u/%u\n", pos, size);
+    if (pos < size) {
+      printf("TTY esc : %u/%u : ", pos, size);
+      res=write(slip_io->fd,slipesc,1);
+      if (ptr[pos] == *slipend) {
+        printf("end\n");
+        res=write(slip_io->fd,slipescend,1);
+      } else {
+        printf("esc\n");
+        res=write(slip_io->fd,slipescesc,1);
+      }
+      ptr += (pos +1);
+      size -= (pos +1);
+      pos = 0;
+    }
+  }
+  printf("TTY end : %u/%u\n", pos, size);
   res=write(slip_io->fd,slipend,1);
 }
