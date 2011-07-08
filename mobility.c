@@ -355,7 +355,7 @@ printf("Current min/max : %u/%u",min_out_seq,max_out_seq);
 #endif /* HARDDEBUG*/
 
 
-  for(i=0; i <= MAX_LBR_BACKUP + 1; ++i) {
+  for(i=0; i <= MAX_LBR_BACKUP; ++i) {
     if(gws[i].used == MOB_GW_KNOWN &&
        ((uint16_t)(next_out_sequence - gws[i].sequence_out) > 1)) {
       if(!(gws[i].non_ack < MAX_NON_ACK)) {
