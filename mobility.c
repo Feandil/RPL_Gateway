@@ -371,9 +371,17 @@ printf("Current min/max : %u/%u",min_out_seq,max_out_seq);
 
       pos = min_out_seq;
       while(pos != MOB_LIST_END
-          && UINT_LESS_THAN(gws[i].sequence_out, uip_ds6_routing_table[pos].state.seq + 1)) {
+          && UINT_LESS_THAN(uip_ds6_routing_table[pos].state.seq, gws[i].sequence_out)) {
         pos = uip_ds6_routing_table[pos].state.next_seq;
       }
+
+      printf("Starting pos : %u", pos);
+      if(pos != MOB_LIST_END) {
+        printf(" (ie seq %u)\n",uip_ds6_routing_table[pos].state.seq);
+      } else {
+        printf("\n");
+      }
+      printf("Theorical end : %u \n",data->sequence);
 
       while(pos != MOB_LIST_END
           && UINT_LESS_THAN(uip_ds6_routing_table[pos].state.seq, data->sequence + 1)) {
