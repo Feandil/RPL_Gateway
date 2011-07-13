@@ -429,11 +429,13 @@ printf("\n");
 printf("Add PadN (2) :  %u \n", temp_len);
         MOB_BUFF_OPT->type = MOB_OPT_PADN;
         MOB_BUFF_OPT->len = 0;
+        temp_len += 2;
 
 printf("Add timestamp : %u\n", temp_len);
         MOB_BUFF_TIMESTAMP->type = MOB_OPT_TIMESTAMP;
         MOB_BUFF_TIMESTAMP->len = MOB_LEN_TIMESTAMP -2;
         MOB_BUFF_TIMESTAMP->timestamp = uip_ds6_routing_table[pos].state.lifetime.start;
+        temp_len += MOB_LEN_TIMESTAMP;
 
         pos = uip_ds6_routing_table[pos].state.next_seq;
       }
