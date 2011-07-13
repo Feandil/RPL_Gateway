@@ -22,6 +22,8 @@
 void
 print_help()
 {
+  printf("time : %lu\n",clock_seconds());
+
   printf("Usage : ");
   printf("prog -p port -l lipv6 -t tundev -u tundev -P prefix -Q privprefix -i ip6 -y ttydev [-abr] [-c distant_ip6 -T tablename -R tablenum]\n");
   printf("\t-h : Print this message\n");
@@ -38,6 +40,9 @@ print_help()
   printf("\t-Q privprefix : the private prefix used for the tun devices (Must be an ip, considered as a /64)\n");
   printf("\t-T tablename : name of iproute2 table used for outgoing traffic\n");
   printf("\t-R tablenum : int designating the iproute2 table used for outgoing traffic\n");
+
+  printf("time : %lu\n",clock_seconds());
+
 }
 
 void

@@ -325,11 +325,11 @@ dao_input(void)
     /* No-Path DAO received; invoke the route purging routine. */
     rep = uip_ds6_route_lookup(&prefix);
     if(rep != NULL && rep->length==prefixlen
-        && stimestamp_remaining(&rep->state.lifetime) > DAO_EXPIRATION_TIMEOUT) {
+        && stimer_remaining(&rep->state.lifetime) > DAO_EXPIRATION_TIMEOUT) {
       PRINTF("RPL: Setting expiration timer for prefix ");
       PRINT6ADDR(&prefix);
       PRINTF("\n");
-      stimestamp_set(&rep->state.lifetime, DAO_EXPIRATION_TIMEOUT);
+      stimer_set(&rep->state.lifetime, DAO_EXPIRATION_TIMEOUT);
     }
     return;
   }
@@ -343,7 +343,7 @@ dao_input(void)
     PRINTF("RPL: Could not add a route after receiving a DAO\n");
     return;
   } else {
-    stimestamp_set(&rep->state.lifetime, lifetime * instance->lifetime_unit);
+    stimer_set(&rep->state.lifetime, lifetime * instance->lifetime_unit);
     mob_maj_node(rep);
   }
 

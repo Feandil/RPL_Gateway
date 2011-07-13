@@ -108,7 +108,7 @@ rpl_add_route(rpl_dag_t *dag, uip_ipaddr_t *prefix, int prefix_len,
     uip_ipaddr_copy(&rep->nexthop, next_hop);
   }
   rep->state.dag = dag;
-  stimestamp_set(&rep->state.lifetime, dag->instance->default_lifetime * dag->instance->lifetime_unit);
+  stimer_set(&rep->state.lifetime, dag->instance->default_lifetime * dag->instance->lifetime_unit);
   rep->state.learned_from = learned_from;
 
   PRINTF("RPL: Added a route to ");

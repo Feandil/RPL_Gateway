@@ -190,7 +190,7 @@ typedef struct rpl_route_entry {
   uint8_t gw;
   uint16_t seq;
   void *dag;
-  struct stimestamp lifetime;
+  struct stimer lifetime;
   uint16_t next_seq;
   uint16_t prev_seq;
 } rpl_route_entry_t;

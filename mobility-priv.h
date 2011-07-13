@@ -6,14 +6,14 @@ int change_route(uint8_t gw, char *command);
 int change_local_route(char *command);
 void clean_routes(uint8_t gw);
 
-void mob_add_nio(uip_lladdr_t *nio, uint8_t handoff, uint8_t *buff, int *t_len, uint8_t *out_status, uint8_t *out_handoff, uint8_t gw);
+void mob_add_nio(uip_lladdr_t *nio, uint8_t handoff, uint8_t *buff, int *t_len, uint8_t *out_status, uint8_t *out_handoff, uint8_t gw, uint64_t stamp);
 
 void mob_send_message(struct ev_loop *loop, struct ev_timer *w, int revents);
 void mob_send_lbr(uip_ip6addr_t *lbr, uint8_t flag);
 
 void mob_new_node(uip_ds6_route_t *rep);
 void mob_maj_node(uip_ds6_route_t *rep);
-void mob_lost_node(uip_ip6addr_t *lbr);
+void mob_lost_node(uip_ds6_route_t *rep);
 void mob_new_6lbr(uip_ipaddr_t *lbr);
 
 void mob_delete_gw(uint8_t gw);
@@ -32,5 +32,11 @@ void mob_list_remove(uip_ds6_route_t *rep);
 void mob_update_min_ack(uint16_t new_ack);
 void mob_list_init(uip_ds6_route_t *rep);
 void mob_list_maj(uip_ds6_route_t *rep);
+
+int mob_state_evolve(uint8_t new_state);
+
+void mob_check_all_entry(void);
+void mob_clean_entry(struct ev_loop *loop, struct ev_timer *w, int revents);
+
 
 #endif /* __MOBILITY_PRIVATE_H__ */

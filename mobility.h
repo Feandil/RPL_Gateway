@@ -73,9 +73,8 @@ typedef struct mob_opt_nio {
 typedef struct mob_opt_timestamp {
   uint8_t type;
   uint8_t len;
-  uint8_t reserved;
-  uint8_t status;
-} mob_opt_timestamp;
+  uint64_t timestamp;
+} mob_opt_timestamp ;
 
 #define MOB_TYPE  135
 #define MOB_HDR_LEN 4
@@ -88,6 +87,7 @@ typedef struct mob_opt_timestamp {
 #define MOB_GW_KNOWN     1
 #define MOB_GW_RESERVED  2
 
+#define MOB_OPT_PADN       1
 #define MOB_OPT_PREFIX    22
 #define MOB_OPT_STATUS    42
 #define MOB_OPT_PREF      23
@@ -100,6 +100,7 @@ typedef struct mob_opt_timestamp {
 #define MOB_LEN_HANDOFF  4
 #define MOB_LEN_STATUS   4
 #define MOB_LEN_NIO      12
+#define MOB_LEN_TIMESTAMP 10
 
 #define MOB_HANDOFF_NEW_BINDING     1
 #define MOB_HANDOFF_TWO_INTERFACES  2
