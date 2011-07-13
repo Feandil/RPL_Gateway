@@ -687,6 +687,16 @@ mob_maj_node(uip_ds6_route_t *rep)
      ev_timer_again(event_loop,next_send);
     }
   }
+  if(mob_type & MOB_TYPE_STORE) {
+    if(!ev_is_active(next_cleaner)) {
+      printf("Next cleaner activated : %u\n",MOB_SEND_DELAY);
+      ev_timer_set(next_cleaner, stimer_remaining(&(rep->state.lifetime)), 0);
+      ev_timer_start(event_loop, next_cleaner);
+    } else if(next_cleaner->repeat == 0) {
+     next_cleaner->repeat = stimer_remaining(&(rep->state.lifetime));
+     ev_timer_again(event_loop,next_cleaner);
+    }
+  }
 }
 
 void
