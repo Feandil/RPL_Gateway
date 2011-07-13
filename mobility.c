@@ -278,7 +278,7 @@ mob_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen_
         nio = &MOB_BUFF_NIO->addr;
         break;
       case MOB_OPT_TIMESTAMP:
-        printf("Implemented : MOB_OPT_TIMESTAMP : %u, value : %"PRIu64,temp_len,MOB_BUFF_TIMESTAMP->timestamp);
+        printf("Implemented : MOB_OPT_TIMESTAMP : %u, value : %"PRIu64"\n",temp_len,MOB_BUFF_TIMESTAMP->timestamp);
         if(nio != NULL) {
           mob_add_nio(nio,handoff,&(outbuff->options),&out_len,&out_status,&out_handoff,gw,MOB_BUFF_TIMESTAMP->timestamp);
           nio = NULL;
