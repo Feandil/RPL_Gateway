@@ -1089,12 +1089,12 @@ mob_state_evolve(uint8_t new_state)
       ev_timer_stop(event_loop,next_cleaner);
      free(next_cleaner);
       next_cleaner = NULL;
-    } else if (new_state & MOB_TYPE_STORE) {
-      if((next_cleaner = (ev_timer*) malloc(sizeof(ev_timer))) == NULL) {
-        return 2;
-       }
-      ev_init(next_cleaner, mob_clean_entry);
     }
+  } else if (new_state & MOB_TYPE_STORE) {
+    if((next_cleaner = (ev_timer*) malloc(sizeof(ev_timer))) == NULL) {
+      return 2;
+     }
+    ev_init(next_cleaner, mob_clean_entry);
   }
 
   if(mob_type & MOB_TYPE_UPWARD) {
