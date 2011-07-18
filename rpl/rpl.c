@@ -45,6 +45,7 @@
 extern uip_ds6_route_t uip_ds6_routing_table[UIP_DS6_ROUTE_NB];
 
 void mob_new_node(uip_ds6_route_t *rep);
+void mob_update_node(uip_ds6_route_t *rep);
 void mob_lost_node(uip_ip6addr_t *lbr);
 
 #define UIP_IP_BUF                          ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
@@ -106,6 +107,7 @@ rpl_add_route(rpl_dag_t *dag, uip_ipaddr_t *prefix, int prefix_len,
     PRINT6ADDR(next_hop);
     PRINTF("\n");
     uip_ipaddr_copy(&rep->nexthop, next_hop);
+    mob_update_node(rep);
   }
   rep->state.dag = dag;
   stimer_set(&rep->state.lifetime, dag->instance->default_lifetime * dag->instance->lifetime_unit);

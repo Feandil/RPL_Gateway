@@ -692,6 +692,16 @@ mob_new_6lbr(uip_ipaddr_t *lbr)
   }
 }
 
+void
+mob_update_node(uip_ds6_route_t *rep)
+{
+  if((mob_type & MOB_TYPE_APPLY) &&
+      rep->state.learned_from == RPL_ROUTE_FROM_6LBR) {
+    memcpy(&prefix,&rep->ipaddr,sizeof(uip_ipaddr_t));
+    change_route(rep->state.gw, "del");
+    change_local_route("add");
+  }
+}
 
 void
 mob_new_node(uip_ds6_route_t *rep)
