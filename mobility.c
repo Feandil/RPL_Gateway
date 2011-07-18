@@ -735,7 +735,7 @@ mob_lost_node(uip_ds6_route_t *rep)
   int i;
 
   memcpy(((uint8_t*)&prefix)+sizeof(uip_lladdr_t),((uint8_t*)&rep->ipaddr)+sizeof(uip_lladdr_t),sizeof(uip_lladdr_t));
-  change_local_route("remove");
+  change_local_route("del");
   mob_list_remove(rep);
 
   if(mob_type & MOB_TYPE_UPWARD) {
