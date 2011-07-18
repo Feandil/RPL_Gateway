@@ -97,6 +97,15 @@ mob_add_nio(uip_lladdr_t *nio, uint8_t handoff, uint8_t *buff, int *t_len, uint8
     }
   }
 
+  printf("Add distant Node : \n");
+  printf("                   Address : ");
+  PRINT6ADDR(&prefix);
+  printf("\n");
+  printf("                   Gateway : ");
+  PRINT6ADDR((uip_ipaddr_t*)&gws[gw].addr.sin6_addr);
+  printf(" (%u)\n",gw);
+  printf("                   Stimestamp : %"PRIu64"\n", stamp);
+
   switch(handoff) {
     case MOB_HANDOFF_UNKNOWN:
     {
@@ -127,7 +136,7 @@ mob_add_nio(uip_lladdr_t *nio, uint8_t handoff, uint8_t *buff, int *t_len, uint8
       } else {
         if(change_route(gw, "add") < 0) {
 //          status = MOB_STATUS_ERR_FLAG;
-          printf("AN ERROR OCCURED");
+          printf("AN ERROR OCCURED\n");
         }
         locroute = uip_ds6_route_add(&prefix, IP6_LEN, &prefix, 0); /* TODO : change this 0 to pref */
         if(locroute != NULL) {
@@ -137,7 +146,7 @@ mob_add_nio(uip_lladdr_t *nio, uint8_t handoff, uint8_t *buff, int *t_len, uint8
         } else {
           change_route(gw, "del");
 //          status = MOB_STATUS_ERR_FLAG;
-          printf("AN ERROR OCCURED");
+          printf("AN ERROR OCCURED\n ");
         }
       }
       break;
