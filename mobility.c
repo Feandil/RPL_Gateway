@@ -679,6 +679,9 @@ void
 mob_new_6lbr(uip_ipaddr_t *lbr)
 {
   int i;
+  if(memcmp(lbr,&myip, sizeof(uip_ipaddr_t)) == 0) {
+    return;
+  }
   for(i=0;i<MAX_KNOWN_GATEWAY;++i) {
     if(gws[i].used == MOB_GW_KNOWN &&
         equal(&gws[i].addr.sin6_addr, lbr)) {
