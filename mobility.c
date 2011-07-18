@@ -150,10 +150,11 @@ PRINTF("ADD NIO : ");
           change_route(locroute->state.gw, "del");
         } else {
           mob_lost_node(locroute);
-          change_route(gw, "add");
-          locroute->state.gw = gw;
-          locroute->state.lifetime.start = stamp;
+          locroute->state.learned_from = RPL_ROUTE_FROM_6LBR;
         }
+        change_route(gw, "add");
+        locroute->state.gw = gw;
+        locroute->state.lifetime.start = stamp;
       } else {
         if(change_route(gw, "add") < 0) {
 //          status = MOB_STATUS_ERR_FLAG;
