@@ -99,16 +99,16 @@ printf("ADD NIO : ");
           printf("Received distant Node newer than local node (");
           PRINT6ADDR(&prefix);
           printf("):\n");
-          printf("                      Local stimestamp : %"PRIu64"\n", locroute->state.lifetime.start);
+          printf("                      Local stimestamp : %lu\n", locroute->state.lifetime.start);
           printf("                      Remote (%u) stimestamp : %"PRIu64"\n", gw, stamp);
-          printf("SHOULD NOT BE IGNORED (but ignored)\n")
+          printf("SHOULD NOT BE IGNORED (but ignored)\n");
         } else {
           printf("Received distant Node older than local node (");
           PRINT6ADDR(&prefix);
           printf("):\n");
-          printf("                      Local stimestamp : %"PRIu64"\n", locroute->state.lifetime.start);
+          printf("                      Local stimestamp : %lu\n", locroute->state.lifetime.start);
           printf("                      Remote (%u) stimestamp : %"PRIu64"\n", gw, stamp);
-          printf("IGNORED\n")
+          printf("IGNORED\n");
         }
         return;
       }
