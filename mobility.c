@@ -56,7 +56,7 @@ change_route(uint8_t gw, char *command)
     char dest[128];
     toString(&prefix,dest);
     sprintf(cmd,"ip -6 route %s %s dev %s%u", command, dest , tuneldev, gws[gw].devnum);
-    printf("SH : %s\n",cmd);
+    PRINTF("SH : %s\n",cmd);
     return system(cmd);
   } else {
     return 0;
@@ -69,7 +69,7 @@ change_local_route(char *command)
   char dest[128];
   toString(&prefix,dest);
   sprintf(cmd,"ip -6 route %s %s dev %s", command, dest , ttydev);
-  printf("SH : %s\n",cmd);
+  PRINTF("SH : %s\n",cmd);
   return system(cmd);
 }
 
@@ -82,9 +82,9 @@ mob_add_nio(uip_lladdr_t *nio, uint8_t handoff, uint8_t *buff, int *t_len, uint8
 
   memcpy(((uint8_t*)&prefix)+sizeof(uip_lladdr_t),nio,sizeof(uip_lladdr_t));
 
-printf("ADD NIO : ");
+PRINTF("ADD NIO : ");
           PRINT6ADDR(&prefix);
-          printf("\n");
+          PRINTF("\n");
 
   for(locroute = uip_ds6_routing_table;
       locroute < uip_ds6_routing_table + UIP_DS6_ROUTE_NB;
@@ -96,20 +96,20 @@ printf("ADD NIO : ");
             && ((locroute->state.lifetime.start == 0)
                 || (stamp > (uint64_t) locroute->state.lifetime.start)))
               || (stamp == 0 && locroute->state.lifetime.start == 0)) {
-          printf("Received distant Node newer than local node (");
+          PRINTF("Received distant Node newer than local node (");
           PRINT6ADDR(&prefix);
-          printf("):\n");
-          printf("                      Local stimestamp : %lu\n", locroute->state.lifetime.start);
-          printf("                      Remote (%u) stimestamp : %"PRIu64"\n", gw, stamp);
-          printf("-> DELETE PREVIOUS ENTRY\n");
+          PRINTF("):\n");
+          PRINTF("                      Local stimestamp : %lu\n", locroute->state.lifetime.start);
+          PRINTF("                      Remote (%u) stimestamp : %"PRIu64"\n", gw, stamp);
+          PRINTF("-> DELETE PREVIOUS ENTRY\n");
           break;
         } else {
-          printf("Received distant Node older than local node (");
+          PRINTF("Received distant Node older than local node (");
           PRINT6ADDR(&prefix);
-          printf("):\n");
-          printf("                      Local stimestamp : %lu\n", locroute->state.lifetime.start);
-          printf("                      Remote (%u) stimestamp : %"PRIu64"\n", gw, stamp);
-          printf("IGNORED\n");
+          PRINTF("):\n");
+          PRINTF("                      Local stimestamp : %lu\n", locroute->state.lifetime.start);
+          PRINTF("                      Remote (%u) stimestamp : %"PRIu64"\n", gw, stamp);
+          PRINTF("IGNORED\n");
           return;
         }
       }
@@ -117,14 +117,14 @@ printf("ADD NIO : ");
   }
 
 
-  printf("Add distant Node : \n");
-  printf("                   Address : ");
+  PRINTF("Add distant Node : \n");
+  PRINTF("                   Address : ");
   PRINT6ADDR(&prefix);
-  printf("\n");
-  printf("                   Gateway : ");
+  PRINTF("\n");
+  PRINTF("                   Gateway : ");
   PRINT6ADDR((uip_ipaddr_t*)&gws[gw].addr.sin6_addr);
-  printf(" (%u)\n",gw);
-  printf("                   Stimestamp : %"PRIu64"\n", stamp);
+  PRINTF(" (%u)\n",gw);
+  PRINTF("                   Stimestamp : %"PRIu64"\n", stamp);
 
   switch(handoff) {
     case MOB_HANDOFF_UNKNOWN:
@@ -132,7 +132,7 @@ printf("ADD NIO : ");
       if((mob_type & MOB_TYPE_APPLY)
           && (locroute != uip_ds6_routing_table + UIP_DS6_ROUTE_NB)) {
         if(locroute->state.gw != gw) {
-          printf("ERROR : NIO was deleted by the wrong 6LBR\n");
+          PRINTF("ERROR : NIO was deleted by the wrong 6LBR\n");
         } else {
           change_route(gw, "del");
           uip_ds6_route_rm(locroute);
@@ -157,7 +157,7 @@ printf("ADD NIO : ");
       } else {
         if(change_route(gw, "add") < 0) {
 //          status = MOB_STATUS_ERR_FLAG;
-          printf("AN ERROR OCCURED\n");
+          PRINTF("AN ERROR OCCURED\n");
         }
         locroute = uip_ds6_route_add(&prefix, IP6_LEN, &prefix, 0); /* TODO : change this 0 to pref */
         if(locroute != NULL) {
@@ -167,7 +167,7 @@ printf("ADD NIO : ");
         } else {
           change_route(gw, "del");
 //          status = MOB_STATUS_ERR_FLAG;
-          printf("AN ERROR OCCURED\n ");
+          PRINTF("AN ERROR OCCURED\n ");
         }
       }
       break;
@@ -215,48 +215,48 @@ mob_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen_
   }
 
   if(nio == NULL) {
-    printf("6LBR not found\n");
+    PRINTF("6LBR not found\n");
     return;
   }
   nio = NULL;
 
   if (!(buffer->flag & MOB_FLAG_UP_A)) {
-    printf("UDP IN : Flag unimplemented (!A)\n");
+    PRINTF("UDP IN : Flag unimplemented (!A)\n");
     return;
   }
 
   if (!(buffer->flag & MOB_FLAG_UP_H)) {
-    printf("UDP IN : Flag unimplemented (!H)\n");
+    PRINTF("UDP IN : Flag unimplemented (!H)\n");
     return;
   }
 
   if (!(buffer->flag & MOB_FLAG_UP_L)) {
-    printf("UDP IN : Flag unimplemented (!L)\n");
+    PRINTF("UDP IN : Flag unimplemented (!L)\n");
     return;
   }
 
   if (buffer->flag & MOB_FLAG_UP_K) {
-    printf("UDP IN : Flag unimplemented (K)\n");
+    PRINTF("UDP IN : Flag unimplemented (K)\n");
     return;
   }
 
   if (buffer->flag & MOB_FLAG_UP_M) {
-    printf("UDP IN : Flag unimplemented (M)\n");
+    PRINTF("UDP IN : Flag unimplemented (M)\n");
     return;
   }
 
   if (buffer->flag & MOB_FLAG_UP_R) {
-    printf("UDP IN : Flag unimplemented (R)\n");
+    PRINTF("UDP IN : Flag unimplemented (R)\n");
     return;
   }
 
   if (!(buffer->flag & MOB_FLAG_UP_P)) {
-    printf("UDP IN : Flag unimplemented (!P)\n");
+    PRINTF("UDP IN : Flag unimplemented (!P)\n");
     return;
   }
 
   if (!(buffer->flag & MOB_FLAG_UP_O)) {
-    printf("UDP IN : Flag unimplemented (!O)\n");
+    PRINTF("UDP IN : Flag unimplemented (!O)\n");
     return;
   }
 
@@ -275,10 +275,10 @@ mob_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen_
   out_status = 0;
   len -= MOB_LEN_BIND;
 
-  printf("Receive udapte for seq %u from 6lbr %u\n", buffer->sequence, gw);
+  PRINTF("Receive udapte for seq %u from 6lbr %u\n", buffer->sequence, gw);
 
   while (temp_len<len) {
-   printf("Pos : %u/%u\n", temp_len,len);
+   PRINTF("Pos : %u/%u\n", temp_len,len);
     switch(MOB_BUFF_OPT->type) {
       case MOB_OPT_PADN:
         break;
@@ -288,7 +288,7 @@ mob_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen_
           nio = NULL;
         }
         handoff = MOB_HANDOFF_NO_CHANGE;
-        printf("Not Implemented : MOB_OPT_PREFIX : %u \n",temp_len);
+        PRINTF("Not Implemented : MOB_OPT_PREFIX : %u \n",temp_len);
         break;
       case MOB_OPT_PREF:
         if(nio != NULL) {
@@ -296,28 +296,28 @@ mob_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen_
           nio = NULL;
         }
         handoff = MOB_BUFF_PREF->hi;
-        printf("Not Implemented : MOB_OPT_PREF : %u \n",temp_len);
+        PRINTF("Not Implemented : MOB_OPT_PREF : %u \n",temp_len);
         break;
       case MOB_OPT_NIO:
-        printf("Implemented : MOB_OPT_NIO : %u, value : ",temp_len);
+        PRINTF("Implemented : MOB_OPT_NIO : %u, value : ",temp_len);
         PRINTLLADDR(&MOB_BUFF_NIO->addr);
-        printf("\n");
+        PRINTF("\n");
         if(nio != NULL) {
           mob_add_nio(nio,handoff,&(outbuff->options),&out_len,&out_status,&out_handoff,gw,0);
         }
         nio = &MOB_BUFF_NIO->addr;
         break;
       case MOB_OPT_TIMESTAMP:
-        printf("Implemented : MOB_OPT_TIMESTAMP : %u, value : %"PRIu64"\n",temp_len,MOB_BUFF_TIMESTAMP->timestamp);
+        PRINTF("Implemented : MOB_OPT_TIMESTAMP : %u, value : %"PRIu64"\n",temp_len,MOB_BUFF_TIMESTAMP->timestamp);
         if(nio != NULL) {
           mob_add_nio(nio,handoff,&(outbuff->options),&out_len,&out_status,&out_handoff,gw,MOB_BUFF_TIMESTAMP->timestamp);
           nio = NULL;
         } else {
-          printf("ERROR : MOB_OPT_TIMESTAMP without a correct MOB_OPT_NIO : %u \n",temp_len);
+          PRINTF("ERROR : MOB_OPT_TIMESTAMP without a correct MOB_OPT_NIO : %u \n",temp_len);
         }
         break;
       default:
-        printf("Unknown stuff : %u at %u \n",(MOB_BUFF_OPT->type),temp_len);
+        PRINTF("Unknown stuff : %u at %u \n",(MOB_BUFF_OPT->type),temp_len);
         break;
     }
     temp_len += MOB_BUFF_OPT->len+2;
@@ -337,7 +337,7 @@ mob_proceed_up(mob_bind_up *buffer, int len, struct sockaddr_in6 *addr, socklen_
   outbuff->sequence = buffer->sequence;
   outbuff->lifetime = 0;
 
-  printf("send ack for seq %u from 6lbr %u\n", outbuff->sequence, gw);
+  PRINTF("send ack for seq %u from 6lbr %u\n", outbuff->sequence, gw);
   udp_output(output_buffer,hdr->len + MOB_LEN_HDR, addr);
 }
 
@@ -357,7 +357,7 @@ uip_ds6_route_t *locroute;
 
   if(gws[0].used != MOB_GW_KNOWN) {
     w->repeat = MOB_SEND_DELAY;
-    printf("No Hoag, reporting send\n");
+    PRINTF("No Hoag, reporting send\n");
     ev_timer_again(loop,w);
     return;
   } else {
@@ -387,21 +387,21 @@ uip_ds6_route_t *locroute;
   sent = 0;
 
 #if HARDDEBUG
-printf("Current min/max : %u/%u",min_out_seq,max_out_seq);
+PRINTF("Current min/max : %u/%u",min_out_seq,max_out_seq);
    for(locroute = uip_ds6_routing_table;
           locroute < uip_ds6_routing_table + UIP_DS6_ROUTE_NB;
           locroute++) {
-        printf("route %u : ",(uint16_t)(locroute - uip_ds6_routing_table));
+        PRINTF("route %u : ",(uint16_t)(locroute - uip_ds6_routing_table));
         if(locroute->isused
             && locroute->state.learned_from == RPL_ROUTE_FROM_UNICAST_DAO) {
-          printf("used : seq = %u, addr = ",locroute->state.seq);
+          PRINTF("used : seq = %u, addr = ",locroute->state.seq);
           PRINT6ADDR(&locroute->ipaddr);
-          printf(" prev : %u, next : %u\n",locroute->state.prev_seq,locroute->state.next_seq);
+          PRINTF(" prev : %u, next : %u\n",locroute->state.prev_seq,locroute->state.next_seq);
         } else {
-          printf("unused\n");
+          PRINTF("unused\n");
         }
       }
-printf("Current min/max : %u/%u",min_out_seq,max_out_seq);
+PRINTF("Current min/max : %u/%u",min_out_seq,max_out_seq);
 #endif /* HARDDEBUG*/
 
   mob_check_all_entry();
@@ -418,7 +418,7 @@ printf("Current min/max : %u/%u",min_out_seq,max_out_seq);
       } else {
         data->sequence = next_out_sequence - 1;
       }
-      printf("Mob_up construction : ");
+      PRINTF("Mob_up construction : ");
 
       pos = min_out_seq;
       while(pos != MOB_LIST_END
@@ -426,18 +426,18 @@ printf("Current min/max : %u/%u",min_out_seq,max_out_seq);
         pos = uip_ds6_routing_table[pos].state.next_seq;
       }
 
-      printf("Starting pos : %u", pos);
+      PRINTF("Starting pos : %u", pos);
       if(pos != MOB_LIST_END) {
-        printf(" (ie seq %u)\n",uip_ds6_routing_table[pos].state.seq);
+        PRINTF(" (ie seq %u)\n",uip_ds6_routing_table[pos].state.seq);
       } else {
-        printf("\n");
+        PRINTF("\n");
       }
-      printf("Theorical end : %u \n",data->sequence);
+      PRINTF("Theorical end : %u \n",data->sequence);
 
       while(pos != MOB_LIST_END
           && UINT_LESS_THAN(uip_ds6_routing_table[pos].state.seq, data->sequence + 1)) {
         if(handoff_status == 0) {
-printf("Add Handoff (new) : %u \n",temp_len);
+PRINTF("Add Handoff (new) : %u \n",temp_len);
           MOB_BUFF_PREF->type = MOB_OPT_PREF;
           MOB_BUFF_PREF->len = MOB_LEN_HANDOFF - 2;
           MOB_BUFF_PREF->pref = 0;
@@ -445,23 +445,23 @@ printf("Add Handoff (new) : %u \n",temp_len);
           temp_len += MOB_LEN_HANDOFF;
           handoff_status = MOB_HANDOFF_NEW_BINDING;
         }
-printf("Add NIO :  %u : ",temp_len);
+PRINTF("Add NIO :  %u : ",temp_len);
 PRINT6ADDR(&uip_ds6_routing_table[pos].ipaddr);
         MOB_BUFF_NIO->type = MOB_OPT_NIO;
         MOB_BUFF_NIO->len = MOB_LEN_NIO - 2;
         MOB_BUFF_NIO->reserved = 0;
         memcpy(&MOB_BUFF_NIO->addr, LLADDR_FROM_IPADDR(&uip_ds6_routing_table[pos].ipaddr), sizeof(uip_lladdr_t));
-printf(" : ");
+PRINTF(" : ");
 PRINTLLADDR(&MOB_BUFF_NIO->addr);
-printf("\n");
+PRINTF("\n");
         temp_len += MOB_LEN_NIO;
 
-printf("Add PadN (2) :  %u \n", temp_len);
+PRINTF("Add PadN (2) :  %u \n", temp_len);
         MOB_BUFF_OPT->type = MOB_OPT_PADN;
         MOB_BUFF_OPT->len = 0;
         temp_len += 2;
 
-printf("Add timestamp : %u\n", temp_len);
+PRINTF("Add timestamp : %u\n", temp_len);
         MOB_BUFF_TIMESTAMP->type = MOB_OPT_TIMESTAMP;
         MOB_BUFF_TIMESTAMP->len = MOB_LEN_TIMESTAMP -2;
         MOB_BUFF_TIMESTAMP->timestamp = uip_ds6_routing_table[pos].state.lifetime.start;
@@ -474,7 +474,7 @@ printf("Add timestamp : %u\n", temp_len);
         if(deleted[j].used &&
             UINT_LESS_THAN((deleted[j].seq - data->sequence),MOB_MAX_ENTRY_BY_UP)) {
           if (handoff_status != MOB_HANDOFF_UNKNOWN) {
-printf("Add Handoff (unknown)\n");
+PRINTF("Add Handoff (unknown)\n");
             MOB_BUFF_PREF->type = MOB_OPT_PREF;
             MOB_BUFF_PREF->len = MOB_LEN_HANDOFF - 2;
             MOB_BUFF_PREF->pref = 0;
@@ -482,7 +482,7 @@ printf("Add Handoff (unknown)\n");
             temp_len += MOB_LEN_HANDOFF;
             handoff_status = MOB_HANDOFF_UNKNOWN;
           }
-printf("Del NIO\n");
+PRINTF("Del NIO\n");
           MOB_BUFF_NIO->type = MOB_OPT_NIO;
           MOB_BUFF_NIO->len = MOB_LEN_NIO - 2;
           MOB_BUFF_NIO->reserved = 0;
@@ -491,10 +491,10 @@ printf("Del NIO\n");
         }
       }
 
-printf("End position : %u\n",temp_len);
+PRINTF("End position : %u\n",temp_len);
       if(temp_len != 0) {
         hdr->len = temp_len + MOB_LEN_BIND;
-        printf("Send Update for seq %u from 6lbr %u\n", data->sequence, i);
+        PRINTF("Send Update for seq %u from 6lbr %u\n", data->sequence, i);
         udp_output(output_buffer,hdr->len + MOB_LEN_HDR, &gws[i].addr);
         ++gws[i].non_ack;
         sent = 1;
@@ -522,22 +522,22 @@ mob_incoming_ack(mob_bind_ack *buffer, int len, struct sockaddr_in6 *addr)
 
 
   if (buffer->flag & MOB_FLAG_ACK_K) {
-    printf("UDP IN : Flag unimplemented (K)");
+    PRINTF("UDP IN : Flag unimplemented (K)");
     return;
   }
 
   if (buffer->flag & MOB_FLAG_ACK_R) {
-    printf("UDP IN : Flag unimplemented (R)");
+    PRINTF("UDP IN : Flag unimplemented (R)");
     return;
   }
 
   if (!(buffer->flag & MOB_FLAG_ACK_P)) {
-    printf("UDP IN : Flag not set (P) (unimplemented)");
+    PRINTF("UDP IN : Flag not set (P) (unimplemented)");
     return;
   }
 
   if (!(buffer->flag & MOB_FLAG_ACK_O)) {
-    printf("UDP IN : Flag not set (O) (unimplemented)");
+    PRINTF("UDP IN : Flag not set (O) (unimplemented)");
     return;
   }
 
@@ -554,7 +554,7 @@ mob_incoming_ack(mob_bind_ack *buffer, int len, struct sockaddr_in6 *addr)
   }
 
   if(nio == NULL) {
-    printf("6LBR not found\n");
+    PRINTF("6LBR not found\n");
     return;
   }
 
@@ -581,7 +581,7 @@ mob_incoming_ack(mob_bind_ack *buffer, int len, struct sockaddr_in6 *addr)
 
   gws[gw].sequence_out = buffer->sequence;
   gws[gw].non_ack = 0;
-  printf("Ack for sequence %u received from 6LBR %u", gws[gw].sequence_out, gw);
+  PRINTF("Ack for sequence %u received from 6LBR %u", gws[gw].sequence_out, gw);
 
 /*
   status = ack_buff->status;
@@ -598,7 +598,7 @@ mob_incoming_ack(mob_bind_ack *buffer, int len, struct sockaddr_in6 *addr)
           nio = NULL;
         }
         handoff = MOB_HANDOFF_NO_CHANGE;
-        printf("Not Implemented");
+        PRINTF("Not Implemented");
         break;
       case MOB_OPT_STATUS:
         if(nio != NULL) {
@@ -614,7 +614,7 @@ mob_incoming_ack(mob_bind_ack *buffer, int len, struct sockaddr_in6 *addr)
           nio = NULL;
         }
         handoff = MOB_BUFF_PREF->hi;
-        printf("Not Implemented");
+        PRINTF("Not Implemented");
         break;
       case MOB_OPT_NIO:
         if(nio != NULL) {
@@ -623,10 +623,10 @@ mob_incoming_ack(mob_bind_ack *buffer, int len, struct sockaddr_in6 *addr)
         nio = &MOB_BUFF_NIO->addr;
         break;
       case MOB_OPT_TIMESTAMP:
-        printf("Not Implemented");
+        PRINTF("Not Implemented");
         break;
       default:
-        printf("Unknown stuff : %u, pos : %u, len : %u",MOB_BUFF_OPT->type,temp_len, MOB_BUFF_OPT->len+2);
+        PRINTF("Unknown stuff : %u, pos : %u, len : %u",MOB_BUFF_OPT->type,temp_len, MOB_BUFF_OPT->len+2);
         break;
     }
     temp_len += MOB_BUFF_OPT->len+2;
@@ -709,7 +709,7 @@ mob_maj_node(uip_ds6_route_t *rep)
 
   if(mob_type & MOB_TYPE_UPWARD) {
     if(!ev_is_active(next_send)) {
-      printf("Next send activated : %u\n",MOB_SEND_DELAY);
+      PRINTF("Next send activated : %u\n",MOB_SEND_DELAY);
       ev_timer_set(next_send, MOB_SEND_DELAY, 0);
       ev_timer_start(event_loop, next_send);
     } else if(next_send->repeat == MOB_SEND_TIMEOUT) {
@@ -719,7 +719,7 @@ mob_maj_node(uip_ds6_route_t *rep)
   }
   if(mob_type & MOB_TYPE_STORE) {
     if(!ev_is_active(next_cleaner)) {
-      printf("Next cleaner activated : %u\n",MOB_SEND_DELAY);
+      PRINTF("Next cleaner activated : %u\n",MOB_SEND_DELAY);
       ev_timer_set(next_cleaner, stimer_remaining(&(rep->state.lifetime)), 0);
       ev_timer_start(event_loop, next_cleaner);
     } else if(next_cleaner->repeat == 0) {
@@ -748,7 +748,7 @@ mob_lost_node(uip_ds6_route_t *rep)
         return;
       }
     }
-    printf("MOB : BUFFER OVERFLOW");
+    PRINTF("MOB : BUFFER OVERFLOW");
   }
 }
 
@@ -763,16 +763,16 @@ mob_new_gw(mob_new_lbr *target)
   toString(&target->addr,gw);
 
   if(target->flags & MOB_FLAG_LBR_Q) {
-    printf("send response 6LBR\n");
+    PRINTF("send response 6LBR\n");
     mob_send_lbr(&target->addr,0);
   }
 
   if(target->flags & MOB_FLAG_LBR_U) {
-    printf("send unknown 6LBR\n");
+    PRINTF("send unknown 6LBR\n");
     for(i = 0; i < MAX_KNOWN_GATEWAY; ++i) {
       if(gws[i].used == MOB_GW_KNOWN) {
         if(equal(&gws[i].addr.sin6_addr,&target->addr)) {
-          printf("Known gateway, forget\n");
+          PRINTF("Known gateway, forget\n");
           return;
         }
       }
@@ -784,7 +784,7 @@ mob_new_gw(mob_new_lbr *target)
       if(equal(&gws[0].addr.sin6_addr,&target->addr)) {
         return;
       } else {
-        printf("ERROR : Multi-HoAg not supported yet");
+        PRINTF("ERROR : Multi-HoAg not supported yet");
         return;
       }
     } else {
@@ -813,7 +813,7 @@ mob_new_gw(mob_new_lbr *target)
   }
 
   if(unused_elt == NULL) {
-    printf("NO PLACE FOR NEW 6LBR !!!\n");
+    PRINTF("NO PLACE FOR NEW 6LBR !!!\n");
     return;
   }
 
@@ -849,7 +849,7 @@ mob_new_gw(mob_new_lbr *target)
       }
     }
   } else {
-    printf("ERROR\n");
+    PRINTF("ERROR\n");
   }
 }
 
@@ -870,7 +870,7 @@ clean_routes(uint8_t gw)
     if(locroute->isused) {
       if(locroute->state.learned_from == RPL_ROUTE_FROM_6LBR
           && (locroute->state.gw = gw)) {
-        memcpy(((uint8_t*)&prefix)+sizeof(uip_lladdr_t), &locroute->ipaddr, sizeof(uip_lladdr_t));
+        memcpy(&prefix, &locroute->ipaddr, sizeof(uip_ipaddr_t));
         change_route(gw, "del");
         uip_ds6_route_rm(locroute);
       }
@@ -905,10 +905,9 @@ mob_close_tunnels(void)
 
   if((mob_type & MOB_TYPE_APPLY) ||
       (mob_type & MOB_TYPE_STORE)) {
-printf("mobapply\n");
     for(i = 0; i < MAX_KNOWN_GATEWAY; ++i) {
       if(gws[i].used == MOB_GW_KNOWN) {
-        printf("delete : %u\n",i);
+        PRINTF("delete : %u\n",i);
         mob_delete_gw(i);
       }
     }
@@ -925,19 +924,19 @@ receive_udp(uint8_t *buffer, int read, struct sockaddr_in6 *addr, socklen_t addr
   ext_hdr *buff;
 
   if(read < MOB_HDR_LEN) {
-    printf("UDP IN : Packet too short : %u", read);
+    PRINTF("UDP IN : Packet too short : %u", read);
     return;
   }
 
   buff=((ext_hdr*)buffer);
 
   if(buff->type != MOB_TYPE) {
-    printf("UDP IN : Not a Mobility Packet");
+    PRINTF("UDP IN : Not a Mobility Packet");
     return;
   }
 
   if(buff->len != read - MOB_HDR_LEN) {
-    printf("UDP IN : Bad length (%u VS %u - %u)", buff->len, read, MOB_HDR_LEN);
+    PRINTF("UDP IN : Bad length (%u VS %u - %u)", buff->len, read, MOB_HDR_LEN);
     return;
   }
 
@@ -948,22 +947,22 @@ receive_udp(uint8_t *buffer, int read, struct sockaddr_in6 *addr, socklen_t addr
       if(mob_type & MOB_TYPE_STORE) {
         mob_proceed_up((mob_bind_up*)&(buff->next), buff->len, addr, addr_len);
       } else {
-        printf("UDP IN : Bad message for 6LBR (Binding Update)\n");
+        PRINTF("UDP IN : Bad message for 6LBR (Binding Update)\n");
       }
       break;
     case MOB_HR_ACK:
       if(mob_type & MOB_TYPE_UPWARD) {
         mob_incoming_ack((mob_bind_ack*)&buff->next, buff->len, addr);
       } else {
-        printf("UDP IN : Bad message for HoAg(Ack)\n");
+        PRINTF("UDP IN : Bad message for HoAg(Ack)\n");
       }
       break;
     case MOB_HR_NEW_G:
-      printf("UDP IN : NEW GW\n");
+      PRINTF("UDP IN : NEW GW\n");
       mob_new_gw((mob_new_lbr*)&(buff->next));
       break;
     default:
-      printf("UDP IN : Bad message (Unknown : %u)",buff->mess);
+      PRINTF("UDP IN : Bad message (Unknown : %u)",buff->mess);
       break;
  }
 }
@@ -1031,7 +1030,7 @@ void mob_lbr_evolve(uint8_t old_gw, gw_list *new_gw_p, uint8_t new_state)
 
 void mob_lbr_evolve_state(gw_list *gw, uint8_t new_state, uint8_t old_state)
 {
-  printf("LBR evolution : %u to %u\n",old_state,new_state);
+  PRINTF("LBR evolution : %u to %u\n",old_state,new_state);
 
   if((mob_type & MOB_TYPE_UPWARD)
       && (new_state & MOB_FLAG_LBR_R)
@@ -1040,7 +1039,7 @@ void mob_lbr_evolve_state(gw_list *gw, uint8_t new_state, uint8_t old_state)
     tunnel_create(tuneldev, gw->devnum, &gw->addr);
     create_reroute(tuneldev, gw->devnum);
   }
-  printf("previous seq : %u (%u)\n",gw->sequence_out,min_out_seq);
+  PRINTF("previous seq : %u (%u)\n",gw->sequence_out,min_out_seq);
   if((new_state ^ old_state) & MOB_FLAG_LBR_S) {
     if(min_out_seq != MOB_LIST_END) {
       min_ack_sequence = (gw->sequence_out = uip_ds6_routing_table[min_out_seq].state.seq - 1);
@@ -1048,11 +1047,11 @@ void mob_lbr_evolve_state(gw_list *gw, uint8_t new_state, uint8_t old_state)
       gw->sequence_out = min_ack_sequence;
     }
  }
-  printf("New seq : %u \n",gw->sequence_out);
+  PRINTF("New seq : %u \n",gw->sequence_out);
   if((new_state & MOB_FLAG_LBR_S)
       && (mob_type & MOB_TYPE_UPWARD)) {
     if(!ev_is_active(next_send)) {
-      printf("Next send activated : %u\n",MOB_SEND_DELAY);
+      PRINTF("Next send activated : %u\n",MOB_SEND_DELAY);
       ev_timer_set(next_send, MOB_SEND_DELAY, 0);
       ev_timer_start(event_loop, next_send);
     }
@@ -1070,12 +1069,12 @@ mob_state_evolve(uint8_t new_state)
 
   if((new_state & MOB_TYPE_APPLY)
       && (new_state & MOB_TYPE_UPWARD)) {
-    printf("ERROR : MOB_TYPE_APPLY and MOB_TYPE_UPWARD uncompatibles\n");
+    PRINTF("ERROR : MOB_TYPE_APPLY and MOB_TYPE_UPWARD uncompatibles\n");
     return 3;
   }
   if((new_state & MOB_TYPE_APPLY)
       && (!(new_state & MOB_TYPE_STORE))) {
-    printf("ERROR : MOB_TYPE_APPLY and !MOB_TYPE_STORE uncompatibles\n");
+    PRINTF("ERROR : MOB_TYPE_APPLY and !MOB_TYPE_STORE uncompatibles\n");
     return 3;
   }
 

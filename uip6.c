@@ -82,7 +82,7 @@
 /* For Debug, logging, statistics                                            */
 /*---------------------------------------------------------------------------*/
 
-#define DEBUG 1
+#define DEBUG DEBUG_NONE
 #include "uip-debug.h"
 
 void uip_rpl_input(void);

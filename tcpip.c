@@ -46,7 +46,7 @@
 #include "ttyConnection.h"
 #include "tun.h"
 
-#define DEBUG 1
+#define DEBUG DEBUG_NONE
 #include "uip-debug.h"
 
 #define UIP_ICMP_BUF ((struct uip_icmp_hdr *)&uip_buf[UIP_LLIPH_LEN + uip_ext_len])

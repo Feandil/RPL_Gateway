@@ -13,7 +13,8 @@
 #include "uip6.h"
 #include "tcpip.h"
 
-#define DEBUG 0
+#define DEBUG DEBUG_NONE
+#include "uip-debug.h"
 
 unsigned char *slipend;
 unsigned char *slipesc;
@@ -49,7 +50,7 @@ static void handle_input(slip_io_t *slip_io)
           res=write(slip_io->fd,temp,11);
           break;
         default:
-          printf("Unknown conctrol char : %c\n",slip_io->buffer[slip_io->buffer_start+1]);
+          PRINTF("Unknown conctrol char : %c\n",slip_io->buffer[slip_io->buffer_start+1]);
           break;
       }
       break;
@@ -58,12 +59,12 @@ static void handle_input(slip_io_t *slip_io)
         slip_io->first_end=0;
       }
       if (slip_io->buffer_end>slip_io->buffer_start) {
-        printf("PACKET SEEN\n");
+        PRINTF("PACKET SEEN\n");
         memcpy(uip_buf,&slip_io->buffer[slip_io->buffer_start],slip_io->buffer_end-slip_io->buffer_start);
         uip_len = slip_io->buffer_end-slip_io->buffer_start;
         tcpip_input();
       } else {
-        printf("VOID PACKET SEEN\n");
+        PRINTF("VOID PACKET SEEN\n");
       }
       break;
     default:
@@ -106,10 +107,10 @@ tty_readable_cb (struct ev_loop *loop, struct ev_io *w, int revents)
     for(i=0;i<slip_io->read;++i) {
       if(slip_io->buffer_end >= TTY_BUFF_SIZE) {
         for (j=slip_io->buffer_start;j<slip_io->buffer_end;++j) {
-          printf("%c",slip_io->buffer[j]);
+          PRINTF("%c",slip_io->buffer[j]);
           if(slip_io->buffer[j] == '\n'
               && j < slip_io->buffer_end - 1) {
-          printf("[TTY-IN] ");
+          PRINTF("[TTY-IN] ");
           }
         }
         slip_io->buffer_start=0;
@@ -156,12 +157,12 @@ tty_readable_cb (struct ev_loop *loop, struct ev_io *w, int revents)
               slip_io->state=STATE_OK;
               break;
             default:
-//              printf("%c",slip_io->temp[i]);
+              PRINTF("%c",slip_io->temp[i]);
               break;
           }
           break;
         default:
-          printf("UNKNOWN STATE : %u\n", slip_io->state);
+          PRINTF("UNKNOWN STATE : %u\n", slip_io->state);
           break;
       }
     }
@@ -244,7 +245,7 @@ void
 tty_output(uint8_t *ptr, int size) {
   int res, pos;
   pos = 0;
-  printf("TTY start : %u/%u\n", pos, size);
+  PRINTF("TTY start : %u/%u\n", pos, size);
   while(pos<size) {
     while(pos < size
         && (ptr[pos] != *slipend)
@@ -252,15 +253,15 @@ tty_output(uint8_t *ptr, int size) {
       ++ pos;
     }
     res=write(slip_io->fd,ptr,pos);
-    printf("TTY pause : %u/%u\n", pos, size);
+    PRINTF("TTY pause : %u/%u\n", pos, size);
     if (pos < size) {
-      printf("TTY esc : %u/%u : ", pos, size);
+      PRINTF("TTY esc : %u/%u : ", pos, size);
       res=write(slip_io->fd,slipesc,1);
       if (ptr[pos] == *slipend) {
-        printf("end\n");
+        PRINTF("end\n");
         res=write(slip_io->fd,slipescend,1);
       } else {
-        printf("esc\n");
+        PRINTF("esc\n");
         res=write(slip_io->fd,slipescesc,1);
       }
       ptr += (pos +1);
@@ -268,6 +269,6 @@ tty_output(uint8_t *ptr, int size) {
       pos = 0;
     }
   }
-  printf("TTY end : %u/%u\n", pos, size);
+  PRINTF("TTY end : %u/%u\n", pos, size);
   res=write(slip_io->fd,slipend,1);
 }
