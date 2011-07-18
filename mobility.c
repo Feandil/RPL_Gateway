@@ -101,7 +101,8 @@ printf("ADD NIO : ");
           printf("):\n");
           printf("                      Local stimestamp : %lu\n", locroute->state.lifetime.start);
           printf("                      Remote (%u) stimestamp : %"PRIu64"\n", gw, stamp);
-          printf("SHOULD NOT BE IGNORED (but ignored)\n");
+          printf("-> DELETE PREVIOUS ENTRY\n");
+          break;
         } else {
           printf("Received distant Node older than local node (");
           PRINT6ADDR(&prefix);
@@ -109,22 +110,12 @@ printf("ADD NIO : ");
           printf("                      Local stimestamp : %lu\n", locroute->state.lifetime.start);
           printf("                      Remote (%u) stimestamp : %"PRIu64"\n", gw, stamp);
           printf("IGNORED\n");
+          return;
         }
-        return;
       }
     }
   }
 
-  for(locroute = uip_ds6_routing_table;
-      locroute < uip_ds6_routing_table + UIP_DS6_ROUTE_NB;
-      locroute++) {
-    if(locroute->isused) {
-      if(locroute->state.learned_from == RPL_ROUTE_FROM_6LBR
-          && (uip_ipaddr_cmp(&prefix,&locroute->ipaddr))) {
-        break;
-      }
-    }
-  }
 
   printf("Add distant Node : \n");
   printf("                   Address : ");
