@@ -143,12 +143,13 @@ printf("ADD NIO : ");
     default:
     {
       if(locroute != uip_ds6_routing_table + UIP_DS6_ROUTE_NB) {
-        if((locroute->state.gw != gw)
-            && (((stamp != 0)
-                && ((locroute->state.lifetime.start == 0)
-                    || (stamp > (uint64_t) locroute->state.lifetime.start)))
-              || (stamp == 0 && locroute->state.lifetime.start == 0))) {
+        if(locroute->state.learned_from == RPL_ROUTE_FROM_6LBR) {
+          if(locroute->state.gw == gw) {
+            break;
+          }
           change_route(locroute->state.gw, "del");
+        } else {
+          mob_lost_node(locroute);
           change_route(gw, "add");
           locroute->state.gw = gw;
           locroute->state.lifetime.start = stamp;

@@ -13,7 +13,7 @@
 #include "uip6.h"
 #include "tcpip.h"
 
-#define DEBUG 1
+#define DEBUG 0
 
 unsigned char *slipend;
 unsigned char *slipesc;
