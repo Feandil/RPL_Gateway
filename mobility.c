@@ -82,6 +82,39 @@ mob_add_nio(uip_lladdr_t *nio, uint8_t handoff, uint8_t *buff, int *t_len, uint8
 
   memcpy(((uint8_t*)&prefix)+sizeof(uip_lladdr_t),nio,sizeof(uip_lladdr_t));
 
+printf("ADD NIO : ");
+          PRINT6ADDR(&prefix);
+          printf("\n");
+
+  for(locroute = uip_ds6_routing_table;
+      locroute < uip_ds6_routing_table + UIP_DS6_ROUTE_NB;
+      locroute++) {
+    if(locroute->isused) {
+      /* Do not change local routes */
+      if(uip_ipaddr_cmp(&prefix,&locroute->ipaddr)) {
+        if(((stamp != 0)
+            && ((locroute->state.lifetime.start == 0)
+                || (stamp > (uint64_t) locroute->state.lifetime.start)))
+              || (stamp == 0 && locroute->state.lifetime.start == 0)) {
+          printf("Received distant Node newer than local node (");
+          PRINT6ADDR(&prefix);
+          printf("):\n");
+          printf("                      Local stimestamp : %"PRIu64"\n", locroute->state.lifetime.start);
+          printf("                      Remote (%u) stimestamp : %"PRIu64"\n", gw, stamp);
+          printf("SHOULD NOT BE IGNORED (but ignored)\n")
+        } else {
+          printf("Received distant Node older than local node (");
+          PRINT6ADDR(&prefix);
+          printf("):\n");
+          printf("                      Local stimestamp : %"PRIu64"\n", locroute->state.lifetime.start);
+          printf("                      Remote (%u) stimestamp : %"PRIu64"\n", gw, stamp);
+          printf("IGNORED\n")
+        }
+        return;
+      }
+    }
+  }
+
   for(locroute = uip_ds6_routing_table;
       locroute < uip_ds6_routing_table + UIP_DS6_ROUTE_NB;
       locroute++) {
@@ -89,10 +122,6 @@ mob_add_nio(uip_lladdr_t *nio, uint8_t handoff, uint8_t *buff, int *t_len, uint8
       if(locroute->state.learned_from == RPL_ROUTE_FROM_6LBR
           && (uip_ipaddr_cmp(&prefix,&locroute->ipaddr))) {
         break;
-      }
-      /* Do not change local routes */
-      if(uip_ipaddr_cmp(&prefix,&locroute->ipaddr)) {
-        return;
       }
     }
   }
