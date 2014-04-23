@@ -679,9 +679,6 @@ void
 mob_new_6lbr(uip_ipaddr_t *lbr)
 {
   int i;
-  if(memcmp(lbr,&myip, sizeof(uip_ipaddr_t)) == 0) {
-    return;
-  }
   for(i=0;i<MAX_KNOWN_GATEWAY;++i) {
     if(gws[i].used == MOB_GW_KNOWN &&
         equal(&gws[i].addr.sin6_addr, lbr)) {
@@ -783,6 +780,10 @@ mob_new_gw(mob_new_lbr *target)
 
   if(target->flags & MOB_FLAG_LBR_U) {
     PRINTF("send unknown 6LBR\n");
+    if(memcmp(&target->addr,&myip, sizeof(uip_ipaddr_t)) == 0) {
+      PRINTF("Known gateway (me), forget\n");
+      return;
+    }
     for(i = 0; i < MAX_KNOWN_GATEWAY; ++i) {
       if(gws[i].used == MOB_GW_KNOWN) {
         if(equal(&gws[i].addr.sin6_addr,&target->addr)) {
